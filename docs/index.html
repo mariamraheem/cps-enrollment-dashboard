@@ -4,331 +4,617 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>CPS Enrollment Dashboard</title>
-<meta name="description" content="Chicago Public Schools 20th-day enrollment, race/ethnicity, and English learner / IEP / low-income trends, auto-updated from CPS's public demographic reports." />
+<meta name="description" content="Chicago Public Schools 20th-day enrollment, race/ethnicity, English learner / IEP / low-income, and school-level decline trends, auto-updated from CPS's public demographic reports." />
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2/plotly.min.js"></script>
 <style>
   :root {
     color-scheme: light;
     --surface-1:      #fcfcfb;
+    --surface-2:      #f4f3f0;
     --page-plane:     #f9f9f7;
     --text-primary:   #0b0b0b;
     --text-secondary: #52514e;
     --text-muted:     #898781;
     --gridline:       #e1e0d9;
     --baseline:       #c3c2b7;
-    --border:         rgba(11,11,11,0.10);
-    --series-1: #2a78d6; /* blue - total enrollment */
-    --series-2: #eb6834; /* orange */
-    --series-3: #1baf7a; /* aqua */
-    --series-4: #eda100; /* yellow */
-    --series-5: #e87ba4; /* magenta */
-    --series-6: #008300; /* green */
-    --series-7: #4a3aa7; /* violet */
-    --series-8: #e34948; /* red */
+    --border:         rgba(11,11,11,0.09);
+    --shadow:         0 1px 2px rgba(11,11,11,0.04), 0 8px 24px -12px rgba(11,11,11,0.10);
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
+    --series-5: #e87ba4; --series-6: #008300; --series-7: #4a3aa7; --series-8: #e34948;
     --success:  #006300;
+    --accent-wash: rgba(42,120,214,0.08);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-1:      #1a1a19;
-      --page-plane:     #0d0d0d;
-      --text-primary:   #ffffff;
-      --text-secondary: #c3c2b7;
-      --text-muted:     #898781;
-      --gridline:       #2c2c2a;
-      --baseline:       #383835;
-      --border:         rgba(255,255,255,0.10);
-      --series-1: #3987e5;
-      --series-2: #d95926;
-      --series-3: #199e70;
-      --series-4: #c98500;
-      --series-5: #d55181;
-      --series-6: #008300;
-      --series-7: #9085e9;
-      --series-8: #e66767;
-      --success:  #0ca30c;
+      --surface-1: #1a1a19; --surface-2: #222221; --page-plane: #0d0d0d;
+      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+      --gridline: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.09);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+      --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+      --success: #0ca30c; --accent-wash: rgba(57,135,229,0.14);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-1:      #1a1a19;
-    --page-plane:     #0d0d0d;
-    --text-primary:   #ffffff;
-    --text-secondary: #c3c2b7;
-    --text-muted:     #898781;
-    --gridline:       #2c2c2a;
-    --baseline:       #383835;
-    --border:         rgba(255,255,255,0.10);
-    --series-1: #3987e5;
-    --series-2: #d95926;
-    --series-3: #199e70;
-    --series-4: #c98500;
-    --series-5: #d55181;
-    --series-6: #008300;
-    --series-7: #9085e9;
-    --series-8: #e66767;
-    --success:  #0ca30c;
+    --surface-1: #1a1a19; --surface-2: #222221; --page-plane: #0d0d0d;
+    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
+    --gridline: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.09);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    --success: #0ca30c; --accent-wash: rgba(57,135,229,0.14);
   }
 
   * { box-sizing: border-box; }
+  html { background: var(--page-plane); }
   body {
     margin: 0;
-    background: var(--page-plane);
+    background: radial-gradient(1100px 420px at 12% -10%, var(--accent-wash), transparent 60%), var(--page-plane);
     color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
   }
-  .wrap {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 24px 16px 64px;
-  }
-  header { margin-bottom: 24px; }
-  h1 { font-size: 1.5rem; margin: 0 0 4px; }
-  .subtitle { color: var(--text-secondary); font-size: 0.95rem; margin: 0; }
-  .meta {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    margin-top: 8px;
-  }
-  .meta a { color: var(--text-muted); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 20px 72px; }
 
-  .stat-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-    margin: 20px 0 28px;
+  .eyebrow {
+    text-transform: uppercase; letter-spacing: 0.09em; font-size: 0.72rem; font-weight: 700;
+    color: var(--series-1); margin: 0 0 10px; display: flex; align-items: center; gap: 8px;
   }
-  .stat-tile {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px;
+  .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--series-1); display: inline-block; }
+
+  header { margin-bottom: 22px; }
+  h1 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 700; letter-spacing: -0.015em; margin: 0 0 8px; line-height: 1.15; }
+  .subtitle { color: var(--text-secondary); font-size: 1rem; margin: 0; max-width: 66ch; line-height: 1.5; }
+  .meta { color: var(--text-muted); font-size: 0.78rem; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  /* Tabs */
+  .tabbar {
+    display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+    overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;
   }
-  .stat-tile .label {
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    margin-bottom: 6px;
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab-btn {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font: inherit; font-size: 0.88rem; font-weight: 600; color: var(--text-muted);
+    padding: 10px 14px 12px; white-space: nowrap; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: color 0.15s;
   }
-  .stat-tile .value {
-    font-size: 1.7rem;
-    font-weight: 600;
-    line-height: 1.1;
-  }
-  .stat-tile .delta {
-    font-size: 0.8rem;
-    margin-top: 4px;
-    color: var(--text-secondary);
-  }
+  .tab-btn:hover { color: var(--text-secondary); }
+  .tab-btn.active { color: var(--series-1); border-bottom-color: var(--series-1); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 0 0 24px; }
+  .stat-tile { position: relative; background: var(--surface-1); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; padding: 18px 18px 16px; overflow: hidden; }
+  .stat-tile::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--tile-accent, var(--series-1)); }
+  .stat-tile .label { color: var(--text-secondary); font-size: 0.78rem; font-weight: 500; margin-bottom: 8px; }
+  .stat-tile .value-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .stat-tile .value { font-size: 1.7rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1; }
+  .stat-tile .spark { flex-shrink: 0; }
+  .stat-tile .delta { font-size: 0.78rem; font-weight: 600; margin-top: 8px; color: var(--text-secondary); }
   .stat-tile .delta.down { color: var(--series-8); }
   .stat-tile .delta.up { color: var(--success); }
 
-  .card {
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 12px 8px;
-    margin-bottom: 20px;
-  }
-  .card h2 {
-    font-size: 1rem;
-    margin: 0 0 2px 12px;
-  }
-  .card .note {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin: 0 0 8px 12px;
-  }
-  .plot { width: 100%; height: 360px; }
+  .section-label { display: flex; align-items: baseline; justify-content: space-between; margin: 30px 2px 12px; }
+  .section-label .eyebrow { margin: 0; }
 
-  footer {
-    color: var(--text-muted);
-    font-size: 0.8rem;
-    margin-top: 32px;
-    border-top: 1px solid var(--border);
-    padding-top: 16px;
-  }
-  footer a { color: var(--text-muted); }
+  .card { background: var(--surface-1); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; padding: 20px 16px 14px; margin-bottom: 20px; }
+  .card h2 { font-size: 1.05rem; font-weight: 650; margin: 0 0 3px 14px; letter-spacing: -0.005em; }
+  .card .note { font-size: 0.8rem; color: var(--text-muted); margin: 0 0 10px 14px; max-width: 66ch; }
+  .card-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 4px 14px 14px; }
+  .plot { width: 100%; height: 340px; }
 
-  .status {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    padding: 40px 0;
-    text-align: center;
+  label.field { display: flex; flex-direction: column; gap: 4px; font-size: 0.76rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  select, .select {
+    font: inherit; font-size: 0.86rem; font-weight: 500; color: var(--text-primary);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 10px; cursor: pointer; min-width: 150px;
   }
+  select:focus { outline: 2px solid var(--series-1); outline-offset: 1px; }
+  input[type="range"] { accent-color: var(--series-1); width: 160px; }
+  .range-value { font-weight: 700; color: var(--text-primary); font-size: 0.86rem; }
+  .radio-group { display: flex; gap: 2px; background: var(--surface-2); border-radius: 8px; padding: 3px; border: 1px solid var(--border); }
+  .radio-group button {
+    appearance: none; border: none; background: none; cursor: pointer; font: inherit;
+    font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); padding: 6px 12px; border-radius: 6px;
+  }
+  .radio-group button.active { background: var(--surface-1); color: var(--series-1); box-shadow: var(--shadow); }
+
+  .table-wrap { overflow-x: auto; margin: 0 14px 16px; border-top: 1px solid var(--border); }
+  table.data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  table.data-table th, table.data-table td { text-align: right; padding: 8px 10px; white-space: nowrap; }
+  table.data-table th:first-child, table.data-table td:first-child { text-align: left; }
+  table.data-table thead th { color: var(--text-muted); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; border-bottom: 1px solid var(--border); }
+  table.data-table tbody tr:hover { background: var(--surface-2); }
+  table.data-table tbody td { border-bottom: 1px solid var(--gridline); font-variant-numeric: tabular-nums; }
+  table.data-table tbody td.pos { color: var(--success); }
+  table.data-table tbody td.neg { color: var(--series-8); }
+
+  footer { color: var(--text-muted); font-size: 0.82rem; margin-top: 40px; border-top: 1px solid var(--border); padding-top: 18px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+  footer a { color: var(--text-secondary); text-decoration: none; border-bottom: 1px solid var(--border); }
+  footer a:hover { color: var(--series-1); border-color: var(--series-1); }
+  footer .dot { opacity: 0.5; }
+
+  .status { color: var(--text-muted); font-size: 0.85rem; padding: 60px 0; text-align: center; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <h1>Chicago Public Schools &mdash; Enrollment Dashboard</h1>
-    <p class="subtitle">20th-day enrollment, race/ethnicity, and English learner / IEP / low-income trends, built from CPS's public demographic reports.</p>
+    <p class="eyebrow">Kids First Chicago &middot; District Data</p>
+    <h1>Chicago Public Schools Enrollment</h1>
+    <p class="subtitle">Enrollment, race/ethnicity, English learner / IEP / low-income, and school-level decline trends &mdash; rebuilt automatically from CPS's public demographic reports as soon as new ones are released.</p>
     <p class="meta" id="meta">Loading&hellip;</p>
   </header>
 
   <div id="content" style="display:none;">
-    <div class="stat-row" id="stat-row"></div>
-
-    <div class="card">
-      <h2>Total enrollment, 20th day</h2>
-      <p class="note">District-wide headcount by school year. A break in the line means that year's report used a layout the automated pipeline doesn't parse yet.</p>
-      <div class="plot" id="chart-total"></div>
+    <div class="tabbar" id="tabbar">
+      <button class="tab-btn active" data-tab="overview">Overall Enrollment</button>
+      <button class="tab-btn" data-tab="race">Race / Ethnicity</button>
+      <button class="tab-btn" data-tab="elidep">EL &middot; IEP &middot; Low Income</button>
+      <button class="tab-btn" data-tab="declines">School-Level Declines</button>
     </div>
 
-    <div class="card">
-      <h2>Enrollment by race / ethnicity</h2>
-      <p class="note">Share of total enrollment, by year. Available from 2010&ndash;2011 onward.</p>
-      <div class="plot" id="chart-race"></div>
-    </div>
+    <!-- OVERVIEW -->
+    <section class="tab-panel active" id="panel-overview">
+      <div class="stat-row" id="ov-stats"></div>
+      <div class="section-label"><p class="eyebrow">Trend</p></div>
+      <div class="card">
+        <h2>Enrollment over time</h2>
+        <p class="note">District-wide headcount by school year. A break in the line means that year's report used a layout the automated pipeline doesn't parse yet.</p>
+        <div class="card-controls">
+          <label class="field">Group
+            <select id="ov-metric"></select>
+          </label>
+        </div>
+        <div class="plot" id="ov-line"></div>
+      </div>
+      <div class="card">
+        <h2>Year-on-year change by group</h2>
+        <p class="note">Percent change in each enrollment group vs. the prior year.</p>
+        <div class="card-controls">
+          <label class="field">Year
+            <select id="ov-yoy-year"></select>
+          </label>
+        </div>
+        <div class="plot" id="ov-yoy" style="height:300px;"></div>
+      </div>
+      <div class="section-label"><p class="eyebrow">Data</p></div>
+      <div class="card"><div class="table-wrap" id="ov-table"></div></div>
+    </section>
 
-    <div class="card">
-      <h2>English learners, students with disabilities, low income</h2>
-      <p class="note">Share of total enrollment, by year. Available from 2013&ndash;2014 onward.</p>
-      <div class="plot" id="chart-el"></div>
-    </div>
+    <!-- RACE -->
+    <section class="tab-panel" id="panel-race">
+      <div class="section-label"><p class="eyebrow">Composition</p></div>
+      <div class="card">
+        <h2>Enrollment by race / ethnicity, share of total</h2>
+        <p class="note">Available from 2010&ndash;2011 onward.</p>
+        <div class="plot" id="race-stack"></div>
+      </div>
+      <div class="section-label"><p class="eyebrow">Trend</p></div>
+      <div class="card">
+        <h2>Enrollment by selected race / ethnicity</h2>
+        <div class="card-controls">
+          <label class="field">Race / ethnicity
+            <select id="race-metric"></select>
+          </label>
+        </div>
+        <div class="plot" id="race-line"></div>
+      </div>
+      <div class="card">
+        <h2>Year-on-year change by race / ethnicity</h2>
+        <div class="card-controls">
+          <label class="field">Year
+            <select id="race-yoy-year"></select>
+          </label>
+        </div>
+        <div class="plot" id="race-yoy" style="height:300px;"></div>
+      </div>
+      <div class="section-label"><p class="eyebrow">Data</p></div>
+      <div class="card"><div class="table-wrap" id="race-table"></div></div>
+    </section>
+
+    <!-- EL / IEP / LOW INCOME -->
+    <section class="tab-panel" id="panel-elidep">
+      <div class="section-label"><p class="eyebrow">Trend</p></div>
+      <div class="card">
+        <h2>English learners, students with disabilities, low income</h2>
+        <p class="note">Share of total enrollment, by year. Available from 2013&ndash;2014 onward.</p>
+        <div class="plot" id="el-line"></div>
+      </div>
+      <div class="card">
+        <h2>Year-on-year change</h2>
+        <div class="card-controls">
+          <label class="field">Year
+            <select id="el-yoy-year"></select>
+          </label>
+        </div>
+        <div class="plot" id="el-yoy" style="height:300px;"></div>
+      </div>
+      <div class="section-label"><p class="eyebrow">Data</p></div>
+      <div class="card"><div class="table-wrap" id="el-table"></div></div>
+    </section>
+
+    <!-- SCHOOL DECLINES -->
+    <section class="tab-panel" id="panel-declines">
+      <div class="section-label"><p class="eyebrow">School-level</p></div>
+      <div class="card">
+        <h2>Compare two school years</h2>
+        <p class="note">Every CPS school's total enrollment, base year vs. compare year. Covers school years where the raw report's per-school layout could be parsed automatically (2016&ndash;2017 onward).</p>
+        <div class="card-controls">
+          <label class="field">Base year<select id="dec-base"></select></label>
+          <label class="field">Compare to<select id="dec-compare"></select></label>
+          <label class="field">Schools shown
+            <span><input type="range" id="dec-topn" min="5" max="50" value="20" step="5" /> <span class="range-value" id="dec-topn-val">20</span></span>
+          </label>
+        </div>
+      </div>
+      <div class="stat-row" id="dec-stats"></div>
+      <div class="card">
+        <h2 id="dec-table-title">Largest enrollment declines</h2>
+        <div class="table-wrap" id="dec-table"></div>
+      </div>
+      <div class="section-label"><p class="eyebrow">Single school</p></div>
+      <div class="card">
+        <h2>School enrollment trend</h2>
+        <div class="card-controls">
+          <label class="field">School
+            <select id="dec-school"></select>
+          </label>
+        </div>
+        <div class="plot" id="dec-school-line"></div>
+      </div>
+      <div class="card">
+        <h2>Year-on-year change for selected school</h2>
+        <div class="plot" id="dec-school-yoy" style="height:300px;"></div>
+      </div>
+    </section>
   </div>
 
   <div class="status" id="status">Loading data&hellip;</div>
 
   <footer>
-    Source: <a href="https://www.cps.edu/about/district-data/demographics/" target="_blank" rel="noopener">CPS District Data &ndash; Demographics</a>.
-    Data and dashboard auto-update weekly via GitHub Actions &mdash;
-    <a href="https://github.com/" id="repo-link" target="_blank" rel="noopener">view source</a>.
+    <span>Source: <a href="https://www.cps.edu/about/district-data/demographics/" target="_blank" rel="noopener">CPS District Data &ndash; Demographics</a></span>
+    <span class="dot">&middot;</span>
+    <span>Auto-updated weekly via GitHub Actions</span>
+    <span class="dot">&middot;</span>
+    <span><a href="https://github.com/mariamraheem/cps-enrollment-dashboard" target="_blank" rel="noopener">View source</a></span>
   </footer>
 </div>
 
 <script>
-const isDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
-function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function fmtInt(n) { return n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('en-US'); }
+function fmtPct(n) { return n == null || isNaN(n) ? '—' : (n * 100).toFixed(1) + '%'; }
+function fmtSignedPct(n) { return n == null || isNaN(n) ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%'; }
+function fmtSignedInt(n) { return n == null || isNaN(n) ? '—' : (n >= 0 ? '+' : '') + Math.round(n).toLocaleString('en-US'); }
+function hexToRgba(hex, a) {
+  const h = hex.replace('#', '');
+  return `rgba(${parseInt(h.substring(0,2),16)},${parseInt(h.substring(2,4),16)},${parseInt(h.substring(4,6),16)},${a})`;
 }
-
-function fmtInt(n) {
-  return n == null ? '—' : Math.round(n).toLocaleString('en-US');
-}
-function fmtPct(n) {
-  return n == null ? '—' : (n * 100).toFixed(1) + '%';
-}
-
 function baseLayout(extra) {
   return Object.assign({
-    paper_bgcolor: cssVar('--surface-1'),
-    plot_bgcolor: cssVar('--surface-1'),
+    paper_bgcolor: cssVar('--surface-1'), plot_bgcolor: cssVar('--surface-1'),
     font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: cssVar('--text-secondary'), size: 12 },
-    margin: { l: 48, r: 16, t: 10, b: 36 },
+    margin: { l: 52, r: 16, t: 10, b: 36 },
     xaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') } },
     yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, zerolinecolor: cssVar('--baseline') },
     legend: { orientation: 'h', y: -0.18, font: { color: cssVar('--text-secondary') } },
     hoverlabel: { bgcolor: cssVar('--surface-1'), bordercolor: cssVar('--border'), font: { color: cssVar('--text-primary') } },
   }, extra || {});
 }
-
 const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
 
-const RACE_LABELS = {
-  race_White_n: 'White',
-  race_Black_n: 'Black',
-  race_Hispanic_n: 'Hispanic/Latino',
-  race_Asian_n: 'Asian',
-  race_Multiracial_n: 'Multiracial',
-  race_NativeAmerican_n: 'Native American',
-  race_HawaiianPacificIslander_n: 'Hawaiian/Pacific Islander',
-  race_MENA_n: 'Middle Eastern/N. African',
-  race_NotAvailable_n: 'Not available',
-};
-const RACE_ORDER = ['race_Black_n', 'race_Hispanic_n', 'race_White_n', 'race_Asian_n', 'race_Multiracial_n', 'race_NativeAmerican_n', 'race_HawaiianPacificIslander_n', 'race_MENA_n'];
-const RACE_COLORS = ['--series-1', '--series-2', '--series-3', '--series-4', '--series-5', '--series-6', '--series-7', '--series-8'];
-
-function render(data) {
-  const years = data.years;
-  const lastYear = years[years.length - 1];
-  const prevYear = years.length > 1 ? years[years.length - 2] : null;
-
-  document.getElementById('meta').textContent =
-    `Last checked ${new Date(data.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${years.length} school years`;
-
-  // --- Stat tiles ---
-  const statRow = document.getElementById('stat-row');
-  const delta = prevYear ? lastYear.total_enrollment - prevYear.total_enrollment : null;
-  const deltaClass = delta == null ? '' : (delta < 0 ? 'down' : 'up');
-  const deltaText = delta == null ? '' : `${delta > 0 ? '+' : ''}${fmtInt(delta)} vs ${prevYear.school_year}`;
-
-  const tiles = [
-    { label: `Total enrollment, ${lastYear.school_year}`, value: fmtInt(lastYear.total_enrollment), delta: deltaText, deltaClass },
-  ];
-  if (lastYear.el_pct != null) tiles.push({ label: 'English learners', value: fmtPct(lastYear.el_pct) });
-  if (lastYear.swd_pct != null) tiles.push({ label: 'Students with disabilities', value: fmtPct(lastYear.swd_pct) });
-  if (lastYear.low_income_pct != null) tiles.push({ label: 'Low income', value: fmtPct(lastYear.low_income_pct) });
-
-  statRow.innerHTML = tiles.map(t => `
-    <div class="stat-tile">
-      <div class="label">${t.label}</div>
-      <div class="value">${t.value}</div>
-      ${t.delta ? `<div class="delta ${t.deltaClass}">${t.delta}</div>` : ''}
-    </div>
-  `).join('');
-
-  // --- Total enrollment line ---
-  const totalX = years.map(y => y.school_year);
-  const totalY = years.map(y => y.total_enrollment ?? null);
-  Plotly.newPlot('chart-total', [{
-    x: totalX, y: totalY, type: 'scatter', mode: 'lines+markers',
-    line: { color: cssVar('--series-1'), width: 2, shape: 'spline' },
-    marker: { size: 6, color: cssVar('--series-1') },
-    connectgaps: false,
-    hovertemplate: '%{x}<br><b>%{y:,}</b> students<extra></extra>',
-  }], baseLayout({ yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',', rangemode: 'tozero' } }), PLOTLY_CONFIG);
-
-  // --- Race breakdown ---
-  const raceYears = years.filter(y => y.race_total_n);
-  const raceTraces = RACE_ORDER
-    .filter(key => raceYears.some(y => y[key]))
-    .map((key, i) => ({
-      x: raceYears.map(y => y.school_year),
-      y: raceYears.map(y => y[key] != null ? y[key] / y.race_total_n : null),
-      name: RACE_LABELS[key],
-      type: 'scatter', mode: 'lines',
-      stackgroup: 'race',
-      line: { width: 0.5, color: cssVar(RACE_COLORS[i % RACE_COLORS.length]) },
-      fillcolor: cssVar(RACE_COLORS[i % RACE_COLORS.length]),
-      hovertemplate: '%{x}<br>' + RACE_LABELS[key] + ': <b>%{y:.1%}</b><extra></extra>',
-    }));
-  Plotly.newPlot('chart-race', raceTraces, baseLayout({
-    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',.0%', range: [0, 1] },
-  }), PLOTLY_CONFIG);
-
-  // --- EL / SWD / low income ---
-  const elYears = years.filter(y => y.el_pct != null);
-  const elSeries = [
-    { key: 'el_pct', label: 'English learners', color: '--series-1' },
-    { key: 'swd_pct', label: 'Students with disabilities', color: '--series-3' },
-    { key: 'low_income_pct', label: 'Low income', color: '--series-2' },
-  ];
-  const elTraces = elSeries.map(s => ({
-    x: elYears.map(y => y.school_year),
-    y: elYears.map(y => y[s.key]),
-    name: s.label,
-    type: 'scatter', mode: 'lines+markers',
-    line: { color: cssVar(s.color), width: 2 },
-    marker: { size: 5, color: cssVar(s.color) },
-    hovertemplate: '%{x}<br>' + s.label + ': <b>%{y:.1%}</b><extra></extra>',
-  }));
-  Plotly.newPlot('chart-el', elTraces, baseLayout({
-    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',.0%', rangemode: 'tozero' },
-  }), PLOTLY_CONFIG);
-
-  document.getElementById('content').style.display = '';
-  document.getElementById('status').style.display = 'none';
+function sparklineSVG(values, color, w, h) {
+  const nums = values.filter(v => v != null);
+  if (nums.length < 2) return '';
+  const min = Math.min(...nums), max = Math.max(...nums), range = (max - min) || 1, pad = 3;
+  const step = (w - pad * 2) / (values.length - 1);
+  let d = '';
+  values.forEach((v, i) => { if (v == null) return; const x = pad + i*step, y = h - pad - ((v-min)/range)*(h-pad*2); d += (d?' L ':'M ') + x.toFixed(1) + ' ' + y.toFixed(1); });
+  const lastVal = nums[nums.length-1], lastIdx = values.lastIndexOf(lastVal);
+  const lastX = pad + lastIdx*step, lastY = h - pad - ((lastVal-min)/range)*(h-pad*2);
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none"><path d="${d}" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/><circle cx="${lastX}" cy="${lastY}" r="3" fill="${color}"/></svg>`;
 }
 
-fetch('data/summary.json?_=' + Date.now())
-  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-  .then(render)
-  .catch(err => {
-    document.getElementById('status').textContent = 'Could not load data/summary.json (' + err.message + ').';
-  });
+function yoyBarChart(elId, categories, current, previous, opts) {
+  opts = opts || {};
+  const pct = categories.map((c, i) => previous[i] ? ((current[i]-previous[i])/previous[i]*100) : null);
+  const good = cssVar('--success'), bad = cssVar('--series-8');
+  Plotly.newPlot(elId, [{
+    x: categories, y: pct, type: 'bar',
+    marker: { color: pct.map(v => v == null ? cssVar('--text-muted') : (v >= 0 ? good : bad)) },
+    text: pct.map(v => fmtSignedPct(v)), textposition: 'outside',
+    customdata: categories.map((c,i) => [current[i], previous[i]]),
+    hovertemplate: '<b>%{x}</b><br>YoY: %{y:.1f}%<br>Current: %{customdata[0]:,}<br>Previous: %{customdata[1]:,}<extra></extra>',
+  }], baseLayout({ showlegend: false, yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, ticksuffix: '%', zeroline: true } }), PLOTLY_CONFIG);
+}
 
-// Point the footer link at this page's own repo, whatever it ends up named.
-document.getElementById('repo-link').href = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+function renderTable(elId, columns, rows) {
+  const thead = '<thead><tr>' + columns.map(c => `<th>${c.label}</th>`).join('') + '</tr></thead>';
+  const tbody = '<tbody>' + rows.map(r => '<tr>' + columns.map(c => {
+    const raw = r[c.key];
+    let cls = '';
+    if (c.signColor && typeof raw === 'number') cls = raw > 0 ? 'pos' : (raw < 0 ? 'neg' : '');
+    return `<td class="${cls}">${c.fmt ? c.fmt(raw) : (raw ?? '—')}</td>`;
+  }).join('') + '</tr>').join('') + '</tbody>';
+  document.getElementById(elId).innerHTML = `<table class="data-table">${thead}${tbody}</table>`;
+}
+
+function fillSelect(elId, options, selectedValue, onChange) {
+  const el = document.getElementById(elId);
+  el.innerHTML = options.map(o => `<option value="${o.value}" ${o.value === selectedValue ? 'selected' : ''}>${o.label}</option>`).join('');
+  el.onchange = () => onChange(el.value);
+}
+
+// ---------------------------------------------------------------------
+let SUM = null, SCHOOLS = null;
+
+const OV_GROUPS = [
+  { key: 'total_enrollment', label: 'Total' },
+  { key: 'grade_pre_k', label: 'Pre-K' },
+  { key: 'grade_kindergarten', label: 'Kindergarten' },
+  { key: 'grade_elementary', label: 'Elementary (1–5)' },
+  { key: 'grade_middle', label: 'Middle School (6–8)' },
+  { key: 'grade_high', label: 'High School (9–12)' },
+];
+
+function renderOverview() {
+  const years = SUM.years;
+  const last = years[years.length - 1], prev = years[years.length - 2];
+  const delta = prev ? last.total_enrollment - prev.total_enrollment : null;
+
+  const gradeYears = years.filter(y => y.grade_elementary != null);
+  const lastG = gradeYears[gradeYears.length - 1], prevG = gradeYears[gradeYears.length - 2];
+  let largest = null, smallest = null;
+  if (lastG) {
+    const groupKeys = OV_GROUPS.filter(g => g.key !== 'total_enrollment').map(g => g.key);
+    const vals = groupKeys.map(k => ({ k, v: lastG[k] }));
+    largest = vals.reduce((a, b) => (b.v > a.v ? b : a));
+    smallest = vals.reduce((a, b) => (b.v < a.v ? b : a));
+  }
+  function tile(label, key, valueYear, prevYear, accent) {
+    const v = valueYear[key], p = prevYear ? prevYear[key] : null;
+    const d = p != null ? v - p : null;
+    const dc = d == null ? '' : (d < 0 ? 'down' : 'up');
+    return { label, value: fmtInt(v), delta: d != null ? `${fmtSignedInt(d)} vs ${prevYear.school_year}` : '', deltaClass: dc, accent, spark: gradeYears.map(y => y[key] ?? null) };
+  }
+  const tiles = [ tile(`Total enrollment · ${last.school_year}`, 'total_enrollment', last, prev, '--series-1') ];
+  if (largest) tiles.push(tile(`Largest group: ${OV_GROUPS.find(g=>g.key===largest.k).label}`, largest.k, lastG, prevG, '--series-3'));
+  if (smallest) tiles.push(tile(`Smallest group: ${OV_GROUPS.find(g=>g.key===smallest.k).label}`, smallest.k, lastG, prevG, '--series-2'));
+
+  document.getElementById('ov-stats').innerHTML = tiles.map(t => `
+    <div class="stat-tile" style="--tile-accent:${cssVar(t.accent)}">
+      <div class="label">${t.label}</div>
+      <div class="value-row"><div class="value">${t.value}</div><div class="spark">${sparklineSVG(t.spark, cssVar(t.accent), 72, 28)}</div></div>
+      ${t.delta ? `<div class="delta ${t.deltaClass}">${t.delta}</div>` : ''}
+    </div>`).join('');
+
+  function drawLine(metricKey) {
+    const useYears = metricKey === 'total_enrollment' ? years : gradeYears;
+    Plotly.newPlot('ov-line', [{
+      x: useYears.map(y => y.school_year), y: useYears.map(y => y[metricKey] ?? null),
+      type: 'scatter', mode: 'lines+markers', connectgaps: false,
+      line: { color: cssVar('--series-1'), width: 2, shape: 'spline' },
+      marker: { size: 7, color: cssVar('--series-1'), line: { color: cssVar('--surface-1'), width: 2 } },
+      fill: 'tozeroy', fillcolor: hexToRgba(cssVar('--series-1'), 0.07),
+      hovertemplate: '%{x}<br><b>%{y:,}</b> students<extra></extra>',
+    }], baseLayout({ yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',', rangemode: 'tozero' } }), PLOTLY_CONFIG);
+  }
+  fillSelect('ov-metric', OV_GROUPS.map(g => ({ value: g.key, label: g.label })), 'total_enrollment', drawLine);
+  drawLine('total_enrollment');
+
+  function drawYoY(yearStr) {
+    const idx = gradeYears.findIndex(y => y.school_year === yearStr);
+    if (idx <= 0) { document.getElementById('ov-yoy').innerHTML = '<p class="note">No prior year available for comparison.</p>'; return; }
+    const cur = gradeYears[idx], pv = gradeYears[idx - 1];
+    const keys = OV_GROUPS.filter(g => g.key !== 'total_enrollment');
+    yoyBarChart('ov-yoy', keys.map(g => g.label), keys.map(g => cur[g.key]), keys.map(g => pv[g.key]));
+  }
+  const gYearOpts = gradeYears.map(y => ({ value: y.school_year, label: y.school_year })).reverse();
+  fillSelect('ov-yoy-year', gYearOpts, gradeYears[gradeYears.length-1].school_year, drawYoY);
+  drawYoY(gradeYears[gradeYears.length-1].school_year);
+
+  renderTable('ov-table',
+    [{ key: 'school_year', label: 'Year' }, ...OV_GROUPS.map(g => ({ key: g.key, label: g.label, fmt: fmtInt }))],
+    [...years].reverse().map(y => ({ school_year: y.school_year, total_enrollment: y.total_enrollment, grade_pre_k: y.grade_pre_k, grade_kindergarten: y.grade_kindergarten, grade_elementary: y.grade_elementary, grade_middle: y.grade_middle, grade_high: y.grade_high }))
+  );
+}
+
+const RACE_META = [
+  { key: 'race_Black_n', label: 'Black', accent: '--series-1' },
+  { key: 'race_Hispanic_n', label: 'Hispanic/Latino', accent: '--series-2' },
+  { key: 'race_White_n', label: 'White', accent: '--series-3' },
+  { key: 'race_Asian_n', label: 'Asian', accent: '--series-4' },
+  { key: 'race_Multiracial_n', label: 'Multiracial', accent: '--series-5' },
+  { key: 'race_NativeAmerican_n', label: 'Native American', accent: '--series-6' },
+  { key: 'race_HawaiianPacificIslander_n', label: 'Hawaiian/Pacific Islander', accent: '--series-7' },
+  { key: 'race_MENA_n', label: 'Middle Eastern/N. African', accent: '--series-8' },
+];
+
+function renderRace() {
+  const raceYears = SUM.years.filter(y => y.race_total_n);
+
+  const stackTraces = RACE_META.filter(m => raceYears.some(y => y[m.key])).map(m => {
+    const color = cssVar(m.accent);
+    return {
+      x: raceYears.map(y => y.school_year), y: raceYears.map(y => y[m.key] != null ? y[m.key]/y.race_total_n : null),
+      name: m.label, type: 'scatter', mode: 'lines', stackgroup: 'race',
+      line: { width: 0.5, color }, fillcolor: color,
+      hovertemplate: '%{x}<br>' + m.label + ': <b>%{y:.1%}</b><extra></extra>',
+    };
+  });
+  Plotly.newPlot('race-stack', stackTraces, baseLayout({ yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',.0%', range: [0,1] } }), PLOTLY_CONFIG);
+
+  function drawLine(key) {
+    const meta = RACE_META.find(m => m.key === key);
+    Plotly.newPlot('race-line', [{
+      x: raceYears.map(y => y.school_year), y: raceYears.map(y => y[key] ?? null),
+      type: 'scatter', mode: 'lines+markers', connectgaps: false,
+      line: { color: cssVar(meta.accent), width: 2, shape: 'spline' },
+      marker: { size: 7, color: cssVar(meta.accent), line: { color: cssVar('--surface-1'), width: 2 } },
+      hovertemplate: '%{x}<br><b>%{y:,}</b> students<extra></extra>',
+    }], baseLayout({ yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',', rangemode: 'tozero' } }), PLOTLY_CONFIG);
+  }
+  fillSelect('race-metric', RACE_META.map(m => ({ value: m.key, label: m.label })), 'race_Hispanic_n', drawLine);
+  drawLine('race_Hispanic_n');
+
+  function drawYoY(yearStr) {
+    const idx = raceYears.findIndex(y => y.school_year === yearStr);
+    if (idx <= 0) { document.getElementById('race-yoy').innerHTML = '<p class="note">No prior year available for comparison.</p>'; return; }
+    const cur = raceYears[idx], pv = raceYears[idx-1];
+    const present = RACE_META.filter(m => cur[m.key] != null && pv[m.key] != null);
+    yoyBarChart('race-yoy', present.map(m => m.label), present.map(m => cur[m.key]), present.map(m => pv[m.key]));
+  }
+  const rYearOpts = raceYears.map(y => ({ value: y.school_year, label: y.school_year })).reverse();
+  fillSelect('race-yoy-year', rYearOpts, raceYears[raceYears.length-1].school_year, drawYoY);
+  drawYoY(raceYears[raceYears.length-1].school_year);
+
+  renderTable('race-table',
+    [{ key: 'school_year', label: 'Year' }, ...RACE_META.map(m => ({ key: m.key, label: m.label, fmt: fmtInt }))],
+    [...raceYears].reverse()
+  );
+}
+
+function renderElIep() {
+  const elYears = SUM.years.filter(y => y.el_pct != null);
+  const series = [
+    { key: 'el_pct', nkey: 'el_n', label: 'English learners', accent: '--series-1' },
+    { key: 'swd_pct', nkey: 'swd_n', label: 'Students with disabilities', accent: '--series-7' },
+    { key: 'low_income_pct', nkey: 'low_income_n', label: 'Low income', accent: '--series-2' },
+  ];
+  Plotly.newPlot('el-line', series.map(s => ({
+    x: elYears.map(y => y.school_year), y: elYears.map(y => y[s.key]), name: s.label,
+    type: 'scatter', mode: 'lines+markers', line: { color: cssVar(s.accent), width: 2 },
+    marker: { size: 6, color: cssVar(s.accent), line: { color: cssVar('--surface-1'), width: 1.5 } },
+    hovertemplate: '%{x}<br>' + s.label + ': <b>%{y:.1%}</b><extra></extra>',
+  })), baseLayout({ yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',.0%', rangemode: 'tozero' } }), PLOTLY_CONFIG);
+
+  function drawYoY(yearStr) {
+    const idx = elYears.findIndex(y => y.school_year === yearStr);
+    if (idx <= 0) { document.getElementById('el-yoy').innerHTML = '<p class="note">No prior year available for comparison.</p>'; return; }
+    const cur = elYears[idx], pv = elYears[idx-1];
+    yoyBarChart('el-yoy', series.map(s => s.label), series.map(s => cur[s.nkey]), series.map(s => pv[s.nkey]));
+  }
+  const eYearOpts = elYears.map(y => ({ value: y.school_year, label: y.school_year })).reverse();
+  fillSelect('el-yoy-year', eYearOpts, elYears[elYears.length-1].school_year, drawYoY);
+  drawYoY(elYears[elYears.length-1].school_year);
+
+  renderTable('el-table',
+    [{ key: 'school_year', label: 'Year' },
+     { key: 'el_n', label: 'English learners', fmt: fmtInt }, { key: 'el_pct', label: 'EL %', fmt: fmtPct },
+     { key: 'swd_n', label: 'Students w/ disabilities', fmt: fmtInt }, { key: 'swd_pct', label: 'SWD %', fmt: fmtPct },
+     { key: 'low_income_n', label: 'Low income', fmt: fmtInt }, { key: 'low_income_pct', label: 'Low income %', fmt: fmtPct }],
+    [...elYears].reverse()
+  );
+}
+
+// --- School declines ---
+let decState = { base: null, compare: null, topN: 20 };
+
+function computeDeclines() {
+  const byYear = {};
+  SCHOOLS.schools.forEach(r => { (byYear[r.year] = byYear[r.year] || {})[r.school_id] = r; });
+  const baseMap = byYear[decState.base] || {}, cmpMap = byYear[decState.compare] || {};
+  const rows = [];
+  Object.keys(baseMap).forEach(sid => {
+    if (!(sid in cmpMap)) return;
+    const b = baseMap[sid], c = cmpMap[sid];
+    const abs = c.total - b.total;
+    rows.push({ school_id: sid, school_name: b.school_name, base: b.total, compare: c.total, abs, pct: abs / b.total * 100 });
+  });
+  rows.sort((a, b) => a.abs - b.abs);
+  return rows;
+}
+
+function renderDeclines() {
+  const years = SCHOOLS.years;
+  const yearOpts = years.map(y => ({ value: y, label: y }));
+  if (!decState.base) decState.base = years[0];
+  if (!decState.compare) decState.compare = years[years.length - 1];
+
+  function refresh() {
+    const rows = computeDeclines();
+    const declining = rows.filter(r => r.abs < 0).length;
+    const medianPct = rows.length ? [...rows].map(r => r.pct).sort((a,b)=>a-b)[Math.floor(rows.length/2)] : null;
+
+    document.getElementById('dec-stats').innerHTML = [
+      { label: 'Schools analyzed', value: fmtInt(rows.length), accent: '--series-1' },
+      { label: 'Schools with declines', value: fmtInt(declining), accent: '--series-8' },
+      { label: 'Median % change', value: fmtSignedPct(medianPct), accent: medianPct < 0 ? '--series-8' : '--success' },
+    ].map(t => `<div class="stat-tile" style="--tile-accent:${cssVar(t.accent)}"><div class="label">${t.label}</div><div class="value-row"><div class="value">${t.value}</div></div></div>`).join('');
+
+    const top = rows.slice(0, decState.topN);
+    document.getElementById('dec-table-title').textContent = `Largest enrollment changes (${decState.base} → ${decState.compare})`;
+    renderTable('dec-table', [
+      { key: 'school_name', label: 'School' },
+      { key: 'base', label: decState.base, fmt: fmtInt },
+      { key: 'compare', label: decState.compare, fmt: fmtInt },
+      { key: 'abs', label: 'Change', fmt: fmtSignedInt, signColor: true },
+      { key: 'pct', label: '% Change', fmt: fmtSignedPct, signColor: true },
+    ], top);
+
+    const schoolOpts = top.map(r => ({ value: r.school_id, label: r.school_name }));
+    fillSelect('dec-school', schoolOpts, schoolOpts[0] ? schoolOpts[0].value : null, drawSchool);
+    if (schoolOpts[0]) drawSchool(schoolOpts[0].value);
+  }
+
+  function drawSchool(sid) {
+    const trend = SCHOOLS.schools.filter(r => String(r.school_id) === String(sid)).sort((a,b) => a.year.localeCompare(b.year));
+    if (!trend.length) return;
+    const name = trend[0].school_name;
+    Plotly.newPlot('dec-school-line', [{
+      x: trend.map(r => r.year), y: trend.map(r => r.total), type: 'scatter', mode: 'lines+markers',
+      line: { color: cssVar('--series-1'), width: 2, shape: 'spline' },
+      marker: { size: 7, color: cssVar('--series-1'), line: { color: cssVar('--surface-1'), width: 2 } },
+      hovertemplate: '%{x}<br><b>%{y:,}</b> students<extra></extra>',
+    }], baseLayout({ title: { text: name, font: { size: 13, color: cssVar('--text-primary') } }, yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',', rangemode: 'tozero' } }), PLOTLY_CONFIG);
+
+    const cats = trend.slice(1).map(r => r.year);
+    const cur = trend.slice(1).map(r => r.total);
+    const prev = trend.slice(0, -1).map(r => r.total);
+    yoyBarChart('dec-school-yoy', cats, cur, prev);
+  }
+
+  fillSelect('dec-base', yearOpts, decState.base, v => { decState.base = v; refresh(); });
+  fillSelect('dec-compare', yearOpts, decState.compare, v => { decState.compare = v; refresh(); });
+  const slider = document.getElementById('dec-topn');
+  slider.value = decState.topN;
+  document.getElementById('dec-topn-val').textContent = decState.topN;
+  slider.oninput = () => { decState.topN = parseInt(slider.value, 10); document.getElementById('dec-topn-val').textContent = decState.topN; refresh(); };
+
+  refresh();
+}
+
+// --- Tabs ---
+const renderedTabs = new Set();
+const TAB_RENDERERS = { overview: renderOverview, race: renderRace, elidep: renderElIep, declines: renderDeclines };
+document.getElementById('tabbar').addEventListener('click', e => {
+  const btn = e.target.closest('.tab-btn');
+  if (!btn) return;
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
+  if (!renderedTabs.has(tab)) { TAB_RENDERERS[tab](); renderedTabs.add(tab); }
+  else { window.dispatchEvent(new Event('resize')); }
+});
+
+Promise.all([
+  fetch('data/summary.json?_=' + Date.now()).then(r => { if (!r.ok) throw new Error('summary.json HTTP ' + r.status); return r.json(); }),
+  fetch('data/schools.json?_=' + Date.now()).then(r => { if (!r.ok) throw new Error('schools.json HTTP ' + r.status); return r.json(); }),
+]).then(([sum, schools]) => {
+  SUM = sum; SCHOOLS = schools;
+  document.getElementById('meta').textContent =
+    `Last checked ${new Date(sum.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${sum.years.length} school years of district data · ${schools.years.length} years of school-level data`;
+  document.getElementById('content').style.display = '';
+  document.getElementById('status').style.display = 'none';
+  renderOverview();
+  renderedTabs.add('overview');
+}).catch(err => {
+  document.getElementById('status').textContent = 'Could not load dashboard data (' + err.message + ').';
+});
 </script>
 </body>
 </html>

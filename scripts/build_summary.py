@@ -70,6 +70,38 @@ def _find_total_after_label(df: pd.DataFrame, label: str = "District Total") -> 
     return None
 
 
+GRADE_GROUPS = {
+    "grade_pre_k": ["PE", "PK"],
+    "grade_kindergarten": ["K"],
+    "grade_elementary": ["1", "2", "3", "4", "5"],
+    "grade_middle": ["6", "7", "8"],
+    "grade_high": ["9", "10", "11", "12"],
+}
+
+
+def _normalize_header(v) -> str:
+    """Grade-number headers show up as '1', 1, or 1.0 depending on the era /
+    file format (.xls vs .xlsx) -- normalize them all to plain '1'."""
+    s = str(v).strip()
+    try:
+        f = float(s)
+        if f == int(f):
+            return str(int(f))
+    except (TypeError, ValueError):
+        pass
+    return s
+
+
+def _grade_header_row(df: pd.DataFrame) -> int | None:
+    """Find the row that has both 'Total' and 'PE'/'PK'/'K' as cell values --
+    that's the per-grade-column header row shared by every era of GENERAL file."""
+    for r in range(min(5, len(df))):
+        vals = set(_normalize_header(v) for v in df.iloc[r].tolist())
+        if "Total" in vals and ("PE" in vals or "PK" in vals) and "K" in vals:
+            return r
+    return None
+
+
 def parse_general(path: Path) -> dict | None:
     try:
         xl = pd.ExcelFile(path)
@@ -81,8 +113,39 @@ def parse_general(path: Path) -> dict | None:
         except Exception:
             continue
         total = _find_total_after_label(df, "District Total")
-        if total:
-            return {"total_enrollment": total}
+        if not total:
+            continue
+
+        result = {"total_enrollment": total}
+        header_row = _grade_header_row(df)
+        if header_row is not None:
+            headers = [_normalize_header(v) for v in df.iloc[header_row].tolist()]
+            col_by_header = {}
+            for i, h in enumerate(headers):
+                col_by_header.setdefault(h, i)
+            # District total row is the next row (after the header) containing "District Total"
+            dist_row = None
+            for r in range(header_row + 1, min(header_row + 4, len(df))):
+                if df.iloc[r].astype(str).str.contains("District Total", case=False, na=False).any():
+                    dist_row = r
+                    break
+            if dist_row is not None:
+                row = df.iloc[dist_row]
+                for group, labels in GRADE_GROUPS.items():
+                    total_g = 0
+                    found_any = False
+                    for label in labels:
+                        col = col_by_header.get(label)
+                        if col is None:
+                            continue
+                        try:
+                            total_g += float(row.iloc[col])
+                            found_any = True
+                        except (TypeError, ValueError):
+                            continue
+                    if found_any:
+                        result[group] = int(total_g)
+        return result
     return None
 
 
