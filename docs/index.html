@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CPS Enrollment Dashboard</title>
+<meta name="description" content="Chicago Public Schools 20th-day enrollment, race/ethnicity, and English learner / IEP / low-income trends, auto-updated from CPS's public demographic reports." />
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2/plotly.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --surface-1:      #fcfcfb;
+    --page-plane:     #f9f9f7;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --gridline:       #e1e0d9;
+    --baseline:       #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --series-1: #2a78d6; /* blue - total enrollment */
+    --series-2: #eb6834; /* orange */
+    --series-3: #1baf7a; /* aqua */
+    --series-4: #eda100; /* yellow */
+    --series-5: #e87ba4; /* magenta */
+    --series-6: #008300; /* green */
+    --series-7: #4a3aa7; /* violet */
+    --series-8: #e34948; /* red */
+    --success:  #006300;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface-1:      #1a1a19;
+      --page-plane:     #0d0d0d;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --gridline:       #2c2c2a;
+      --baseline:       #383835;
+      --border:         rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --series-3: #199e70;
+      --series-4: #c98500;
+      --series-5: #d55181;
+      --series-6: #008300;
+      --series-7: #9085e9;
+      --series-8: #e66767;
+      --success:  #0ca30c;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface-1:      #1a1a19;
+    --page-plane:     #0d0d0d;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --gridline:       #2c2c2a;
+    --baseline:       #383835;
+    --border:         rgba(255,255,255,0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --success:  #0ca30c;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--page-plane);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 16px 64px;
+  }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 0.95rem; margin: 0; }
+  .meta {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 8px;
+  }
+  .meta a { color: var(--text-muted); }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 20px 0 28px;
+  }
+  .stat-tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .stat-tile .label {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-bottom: 6px;
+  }
+  .stat-tile .value {
+    font-size: 1.7rem;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .stat-tile .delta {
+    font-size: 0.8rem;
+    margin-top: 4px;
+    color: var(--text-secondary);
+  }
+  .stat-tile .delta.down { color: var(--series-8); }
+  .stat-tile .delta.up { color: var(--success); }
+
+  .card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 12px 8px;
+    margin-bottom: 20px;
+  }
+  .card h2 {
+    font-size: 1rem;
+    margin: 0 0 2px 12px;
+  }
+  .card .note {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin: 0 0 8px 12px;
+  }
+  .plot { width: 100%; height: 360px; }
+
+  footer {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    margin-top: 32px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  footer a { color: var(--text-muted); }
+
+  .status {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    padding: 40px 0;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Chicago Public Schools &mdash; Enrollment Dashboard</h1>
+    <p class="subtitle">20th-day enrollment, race/ethnicity, and English learner / IEP / low-income trends, built from CPS's public demographic reports.</p>
+    <p class="meta" id="meta">Loading&hellip;</p>
+  </header>
+
+  <div id="content" style="display:none;">
+    <div class="stat-row" id="stat-row"></div>
+
+    <div class="card">
+      <h2>Total enrollment, 20th day</h2>
+      <p class="note">District-wide headcount by school year. A break in the line means that year's report used a layout the automated pipeline doesn't parse yet.</p>
+      <div class="plot" id="chart-total"></div>
+    </div>
+
+    <div class="card">
+      <h2>Enrollment by race / ethnicity</h2>
+      <p class="note">Share of total enrollment, by year. Available from 2010&ndash;2011 onward.</p>
+      <div class="plot" id="chart-race"></div>
+    </div>
+
+    <div class="card">
+      <h2>English learners, students with disabilities, low income</h2>
+      <p class="note">Share of total enrollment, by year. Available from 2013&ndash;2014 onward.</p>
+      <div class="plot" id="chart-el"></div>
+    </div>
+  </div>
+
+  <div class="status" id="status">Loading data&hellip;</div>
+
+  <footer>
+    Source: <a href="https://www.cps.edu/about/district-data/demographics/" target="_blank" rel="noopener">CPS District Data &ndash; Demographics</a>.
+    Data and dashboard auto-update weekly via GitHub Actions &mdash;
+    <a href="https://github.com/" id="repo-link" target="_blank" rel="noopener">view source</a>.
+  </footer>
+</div>
+
+<script>
+const isDark = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function fmtInt(n) {
+  return n == null ? '—' : Math.round(n).toLocaleString('en-US');
+}
+function fmtPct(n) {
+  return n == null ? '—' : (n * 100).toFixed(1) + '%';
+}
+
+function baseLayout(extra) {
+  return Object.assign({
+    paper_bgcolor: cssVar('--surface-1'),
+    plot_bgcolor: cssVar('--surface-1'),
+    font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: cssVar('--text-secondary'), size: 12 },
+    margin: { l: 48, r: 16, t: 10, b: 36 },
+    xaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') } },
+    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, zerolinecolor: cssVar('--baseline') },
+    legend: { orientation: 'h', y: -0.18, font: { color: cssVar('--text-secondary') } },
+    hoverlabel: { bgcolor: cssVar('--surface-1'), bordercolor: cssVar('--border'), font: { color: cssVar('--text-primary') } },
+  }, extra || {});
+}
+
+const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
+
+const RACE_LABELS = {
+  race_White_n: 'White',
+  race_Black_n: 'Black',
+  race_Hispanic_n: 'Hispanic/Latino',
+  race_Asian_n: 'Asian',
+  race_Multiracial_n: 'Multiracial',
+  race_NativeAmerican_n: 'Native American',
+  race_HawaiianPacificIslander_n: 'Hawaiian/Pacific Islander',
+  race_MENA_n: 'Middle Eastern/N. African',
+  race_NotAvailable_n: 'Not available',
+};
+const RACE_ORDER = ['race_Black_n', 'race_Hispanic_n', 'race_White_n', 'race_Asian_n', 'race_Multiracial_n', 'race_NativeAmerican_n', 'race_HawaiianPacificIslander_n', 'race_MENA_n'];
+const RACE_COLORS = ['--series-1', '--series-2', '--series-3', '--series-4', '--series-5', '--series-6', '--series-7', '--series-8'];
+
+function render(data) {
+  const years = data.years;
+  const lastYear = years[years.length - 1];
+  const prevYear = years.length > 1 ? years[years.length - 2] : null;
+
+  document.getElementById('meta').textContent =
+    `Last checked ${new Date(data.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${years.length} school years`;
+
+  // --- Stat tiles ---
+  const statRow = document.getElementById('stat-row');
+  const delta = prevYear ? lastYear.total_enrollment - prevYear.total_enrollment : null;
+  const deltaClass = delta == null ? '' : (delta < 0 ? 'down' : 'up');
+  const deltaText = delta == null ? '' : `${delta > 0 ? '+' : ''}${fmtInt(delta)} vs ${prevYear.school_year}`;
+
+  const tiles = [
+    { label: `Total enrollment, ${lastYear.school_year}`, value: fmtInt(lastYear.total_enrollment), delta: deltaText, deltaClass },
+  ];
+  if (lastYear.el_pct != null) tiles.push({ label: 'English learners', value: fmtPct(lastYear.el_pct) });
+  if (lastYear.swd_pct != null) tiles.push({ label: 'Students with disabilities', value: fmtPct(lastYear.swd_pct) });
+  if (lastYear.low_income_pct != null) tiles.push({ label: 'Low income', value: fmtPct(lastYear.low_income_pct) });
+
+  statRow.innerHTML = tiles.map(t => `
+    <div class="stat-tile">
+      <div class="label">${t.label}</div>
+      <div class="value">${t.value}</div>
+      ${t.delta ? `<div class="delta ${t.deltaClass}">${t.delta}</div>` : ''}
+    </div>
+  `).join('');
+
+  // --- Total enrollment line ---
+  const totalX = years.map(y => y.school_year);
+  const totalY = years.map(y => y.total_enrollment ?? null);
+  Plotly.newPlot('chart-total', [{
+    x: totalX, y: totalY, type: 'scatter', mode: 'lines+markers',
+    line: { color: cssVar('--series-1'), width: 2, shape: 'spline' },
+    marker: { size: 6, color: cssVar('--series-1') },
+    connectgaps: false,
+    hovertemplate: '%{x}<br><b>%{y:,}</b> students<extra></extra>',
+  }], baseLayout({ yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',', rangemode: 'tozero' } }), PLOTLY_CONFIG);
+
+  // --- Race breakdown ---
+  const raceYears = years.filter(y => y.race_total_n);
+  const raceTraces = RACE_ORDER
+    .filter(key => raceYears.some(y => y[key]))
+    .map((key, i) => ({
+      x: raceYears.map(y => y.school_year),
+      y: raceYears.map(y => y[key] != null ? y[key] / y.race_total_n : null),
+      name: RACE_LABELS[key],
+      type: 'scatter', mode: 'lines',
+      stackgroup: 'race',
+      line: { width: 0.5, color: cssVar(RACE_COLORS[i % RACE_COLORS.length]) },
+      fillcolor: cssVar(RACE_COLORS[i % RACE_COLORS.length]),
+      hovertemplate: '%{x}<br>' + RACE_LABELS[key] + ': <b>%{y:.1%}</b><extra></extra>',
+    }));
+  Plotly.newPlot('chart-race', raceTraces, baseLayout({
+    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',.0%', range: [0, 1] },
+  }), PLOTLY_CONFIG);
+
+  // --- EL / SWD / low income ---
+  const elYears = years.filter(y => y.el_pct != null);
+  const elSeries = [
+    { key: 'el_pct', label: 'English learners', color: '--series-1' },
+    { key: 'swd_pct', label: 'Students with disabilities', color: '--series-3' },
+    { key: 'low_income_pct', label: 'Low income', color: '--series-2' },
+  ];
+  const elTraces = elSeries.map(s => ({
+    x: elYears.map(y => y.school_year),
+    y: elYears.map(y => y[s.key]),
+    name: s.label,
+    type: 'scatter', mode: 'lines+markers',
+    line: { color: cssVar(s.color), width: 2 },
+    marker: { size: 5, color: cssVar(s.color) },
+    hovertemplate: '%{x}<br>' + s.label + ': <b>%{y:.1%}</b><extra></extra>',
+  }));
+  Plotly.newPlot('chart-el', elTraces, baseLayout({
+    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, tickformat: ',.0%', rangemode: 'tozero' },
+  }), PLOTLY_CONFIG);
+
+  document.getElementById('content').style.display = '';
+  document.getElementById('status').style.display = 'none';
+}
+
+fetch('data/summary.json?_=' + Date.now())
+  .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(render)
+  .catch(err => {
+    document.getElementById('status').textContent = 'Could not load data/summary.json (' + err.message + ').';
+  });
+
+// Point the footer link at this page's own repo, whatever it ends up named.
+document.getElementById('repo-link').href = location.origin + location.pathname.replace(/\/[^/]*$/, '/');
+</script>
+</body>
+</html>
