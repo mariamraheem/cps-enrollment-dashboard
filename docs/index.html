@@ -6,52 +6,55 @@
 <title>CPS Enrollment Dashboard</title>
 <meta name="description" content="Chicago Public Schools 20th-day enrollment, race/ethnicity, English learner / IEP / low-income, and school-level decline trends, auto-updated from CPS's public demographic reports." />
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2/plotly.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
     color-scheme: light;
-    --surface-1:      #fcfcfb;
-    --surface-2:      #f4f3f0;
-    --page-plane:     #f9f9f7;
-    --text-primary:   #0b0b0b;
-    --text-secondary: #52514e;
-    --text-muted:     #898781;
-    --gridline:       #e1e0d9;
-    --baseline:       #c3c2b7;
-    --border:         rgba(11,11,11,0.09);
-    --shadow:         0 1px 2px rgba(11,11,11,0.04), 0 8px 24px -12px rgba(11,11,11,0.10);
-    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a; --series-4: #eda100;
-    --series-5: #e87ba4; --series-6: #008300; --series-7: #4a3aa7; --series-8: #e34948;
-    --success:  #006300;
-    --accent-wash: rgba(42,120,214,0.08);
+    --surface-1:      #fffefa;
+    --surface-2:      #f5f1e2;
+    --page-plane:     #fbf8ec;
+    --text-primary:   #171a12;
+    --text-secondary: #55523f;
+    --text-muted:     #918c74;
+    --gridline:       #e7e2cd;
+    --baseline:       #d0cab0;
+    --border:         rgba(23,26,18,0.10);
+    --shadow:         0 1px 2px rgba(23,26,18,0.05), 0 8px 24px -12px rgba(23,26,18,0.12);
+    --series-1: #1f7a34; --series-2: #c99a2e; --series-3: #1baf7a; --series-4: #eb6834;
+    --series-5: #4a3aa7; --series-6: #e87ba4; --series-7: #1f5fa8; --series-8: #e34948;
+    --success:  #1a6b2c;
+    --accent-wash:      rgba(31,122,52,0.09);
+    --accent-wash-gold: rgba(201,154,46,0.14);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --surface-1: #1a1a19; --surface-2: #222221; --page-plane: #0d0d0d;
-      --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-      --gridline: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.09);
+      --surface-1: #191d15; --surface-2: #22271c; --page-plane: #10130d;
+      --text-primary: #fdfbf1; --text-secondary: #c7c1a5; --text-muted: #928c72;
+      --gridline: #2b3023; --baseline: #3a3f30; --border: rgba(255,255,255,0.09);
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
-      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
-      --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
-      --success: #0ca30c; --accent-wash: rgba(57,135,229,0.14);
+      --series-1: #288228; --series-2: #af8c2d; --series-3: #17a877; --series-4: #d1682f;
+      --series-5: #7a6cd1; --series-6: #c96f95; --series-7: #3f7bc4; --series-8: #e2605f;
+      --success: #4caf5a; --accent-wash: rgba(40,130,40,0.16); --accent-wash-gold: rgba(175,140,45,0.18);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --surface-1: #1a1a19; --surface-2: #222221; --page-plane: #0d0d0d;
-    --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #898781;
-    --gridline: #2c2c2a; --baseline: #383835; --border: rgba(255,255,255,0.09);
+    --surface-1: #191d15; --surface-2: #22271c; --page-plane: #10130d;
+    --text-primary: #fdfbf1; --text-secondary: #c7c1a5; --text-muted: #928c72;
+    --gridline: #2b3023; --baseline: #3a3f30; --border: rgba(255,255,255,0.09);
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
-    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
-    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
-    --success: #0ca30c; --accent-wash: rgba(57,135,229,0.14);
+    --series-1: #288228; --series-2: #af8c2d; --series-3: #17a877; --series-4: #d1682f;
+    --series-5: #7a6cd1; --series-6: #c96f95; --series-7: #3f7bc4; --series-8: #e2605f;
+    --success: #4caf5a; --accent-wash: rgba(40,130,40,0.16); --accent-wash-gold: rgba(175,140,45,0.18);
   }
 
   * { box-sizing: border-box; }
   html { background: var(--page-plane); }
   body {
     margin: 0;
-    background: radial-gradient(1100px 420px at 12% -10%, var(--accent-wash), transparent 60%), var(--page-plane);
+    background: radial-gradient(1100px 420px at 8% -10%, var(--accent-wash), transparent 60%), radial-gradient(900px 360px at 100% 0%, var(--accent-wash-gold), transparent 55%), var(--page-plane);
     color: var(--text-primary);
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -71,18 +74,18 @@
 
   /* Tabs */
   .tabbar {
-    display: flex; gap: 4px; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 4px; margin-bottom: 24px; padding: 4px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px;
     overflow-x: auto; -ms-overflow-style: none; scrollbar-width: none;
   }
   .tabbar::-webkit-scrollbar { display: none; }
   .tab-btn {
-    appearance: none; border: none; background: none; cursor: pointer;
-    font: inherit; font-size: 0.88rem; font-weight: 600; color: var(--text-muted);
-    padding: 10px 14px 12px; white-space: nowrap; border-bottom: 2px solid transparent;
-    margin-bottom: -1px; transition: color 0.15s;
+    appearance: none; border: none; background: none; cursor: pointer; border-radius: 8px;
+    font: inherit; font-size: 0.86rem; font-weight: 600; color: var(--text-secondary);
+    padding: 9px 14px; white-space: nowrap; transition: color 0.15s, background 0.15s;
   }
-  .tab-btn:hover { color: var(--text-secondary); }
-  .tab-btn.active { color: var(--series-1); border-bottom-color: var(--series-1); }
+  .tab-btn:hover { color: var(--text-primary); }
+  .tab-btn.active { color: #ffffff; background: var(--series-1); box-shadow: var(--shadow); }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
@@ -256,6 +259,11 @@
         <h2 id="dec-table-title">Largest enrollment declines</h2>
         <div class="table-wrap" id="dec-table"></div>
       </div>
+      <div class="card">
+        <h2>Where the declines are</h2>
+        <p class="note">The schools listed above, mapped by location. Circle size tracks the size of the change; red means enrollment fell, green means it grew. Click a circle for details. <span id="dec-map-coverage"></span></p>
+        <div id="dec-map" style="height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border);"></div>
+      </div>
       <div class="section-label"><p class="eyebrow">Single school</p></div>
       <div class="card">
         <h2>School enrollment trend</h2>
@@ -350,7 +358,7 @@ function fillSelect(elId, options, selectedValue, onChange) {
 }
 
 // ---------------------------------------------------------------------
-let SUM = null, SCHOOLS = null;
+let SUM = null, SCHOOLS = null, LOCS = null;
 
 const OV_GROUPS = [
   { key: 'total_enrollment', label: 'Total' },
@@ -513,6 +521,70 @@ function renderElIep() {
 
 // --- School declines ---
 let decState = { base: null, compare: null, topN: 20 };
+let declMap = null, declMarkers = null, declTiles = null;
+
+function renderMap(rows) {
+  const mapEl = document.getElementById('dec-map');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    && document.documentElement.getAttribute('data-theme') !== 'light';
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+
+  if (!declMap) {
+    declMap = L.map('dec-map', { scrollWheelZoom: false, attributionControl: true });
+    declTiles = L.tileLayer(tileUrl, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19,
+    }).addTo(declMap);
+    declMap.setView([41.85, -87.68], 10.4);
+    declMarkers = L.layerGroup().addTo(declMap);
+  } else if (declTiles._url !== tileUrl) {
+    declMap.removeLayer(declTiles);
+    declTiles = L.tileLayer(tileUrl, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19,
+    }).addTo(declMap);
+  }
+
+  declMarkers.clearLayers();
+
+  const good = cssVar('--success'), bad = cssVar('--series-8');
+  const mapped = rows.filter(r => LOCS && LOCS[String(r.school_id)]);
+  const maxAbsPct = Math.max(1, ...rows.map(r => Math.abs(r.pct)));
+
+  mapped.forEach(r => {
+    const [lat, lon] = LOCS[String(r.school_id)];
+    const severity = Math.min(1, Math.abs(r.pct) / maxAbsPct);
+    const radius = 5 + severity * 16;
+    const color = r.pct < 0 ? bad : good;
+    const marker = L.circleMarker([lat, lon], {
+      radius, color: cssVar('--surface-1'), weight: 1.5, fillColor: color, fillOpacity: 0.72,
+    });
+    marker.bindPopup(
+      `<strong>${r.school_name}</strong><br>` +
+      `${decState.base}: ${fmtInt(r.base)}<br>` +
+      `${decState.compare}: ${fmtInt(r.compare)}<br>` +
+      `<span style="color:${color}; font-weight:600;">${fmtSignedInt(r.abs)} (${fmtSignedPct(r.pct)})</span>`
+    );
+    marker.addTo(declMarkers);
+  });
+
+  const coverageEl = document.getElementById('dec-map-coverage');
+  if (coverageEl) {
+    coverageEl.textContent = mapped.length < rows.length
+      ? `Showing ${mapped.length} of ${rows.length} — a few schools have no matching location on file.`
+      : '';
+  }
+
+  if (mapped.length) {
+    const bounds = L.latLngBounds(mapped.map(r => LOCS[String(r.school_id)]));
+    declMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
+  }
+  setTimeout(() => declMap.invalidateSize(), 50);
+}
 
 function computeDeclines() {
   const byYear = {};
@@ -559,6 +631,8 @@ function renderDeclines() {
     const schoolOpts = top.map(r => ({ value: r.school_id, label: r.school_name }));
     fillSelect('dec-school', schoolOpts, schoolOpts[0] ? schoolOpts[0].value : null, drawSchool);
     if (schoolOpts[0]) drawSchool(schoolOpts[0].value);
+
+    renderMap(top);
   }
 
   function drawSchool(sid) {
@@ -598,14 +672,15 @@ document.getElementById('tabbar').addEventListener('click', e => {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
   if (!renderedTabs.has(tab)) { TAB_RENDERERS[tab](); renderedTabs.add(tab); }
-  else { window.dispatchEvent(new Event('resize')); }
+  else { window.dispatchEvent(new Event('resize')); if (declMap) setTimeout(() => declMap.invalidateSize(), 50); }
 });
 
 Promise.all([
   fetch('data/summary.json?_=' + Date.now()).then(r => { if (!r.ok) throw new Error('summary.json HTTP ' + r.status); return r.json(); }),
   fetch('data/schools.json?_=' + Date.now()).then(r => { if (!r.ok) throw new Error('schools.json HTTP ' + r.status); return r.json(); }),
-]).then(([sum, schools]) => {
-  SUM = sum; SCHOOLS = schools;
+  fetch('data/school_locations.json?_=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+]).then(([sum, schools, locs]) => {
+  SUM = sum; SCHOOLS = schools; LOCS = locs;
   document.getElementById('meta').textContent =
     `Last checked ${new Date(sum.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${sum.years.length} school years of district data · ${schools.years.length} years of school-level data`;
   document.getElementById('content').style.display = '';
