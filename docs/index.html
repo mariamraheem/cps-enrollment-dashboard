@@ -269,7 +269,17 @@
       </div>
       <div class="card">
         <h2>Where the declines are</h2>
-        <p class="note">The schools listed above, mapped by location. Circle size tracks the size of the change; red means enrollment fell, green means it grew. Click a circle for details. <span id="dec-map-coverage"></span></p>
+        <p class="note">Size and shade track the size of the change; grey means enrollment fell, green means it grew. Click a shape for details. <span id="dec-map-coverage"></span></p>
+        <div class="card-controls">
+          <label class="field">Group by
+            <span class="radio-group" id="dec-map-groupby">
+              <button type="button" data-val="school" class="active">School</button>
+              <button type="button" data-val="community_area">Community Area</button>
+              <button type="button" data-val="network">Network</button>
+              <button type="button" data-val="esb">ESB District</button>
+            </span>
+          </label>
+        </div>
         <div id="dec-map" style="height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border);"></div>
       </div>
       <div class="section-label"><p class="eyebrow">Single school</p></div>
@@ -376,7 +386,7 @@ function fillSelect(elId, options, selectedValue, onChange) {
 }
 
 // ---------------------------------------------------------------------
-let SUM = null, SCHOOLS = null, LOCS = null;
+let SUM = null, SCHOOLS = null, LOCS = null, GROUPS = null, ESB_MAP = null, ESB_GEO = null;
 
 const OV_GROUPS = [
   { key: 'total_enrollment', label: 'Total' },
@@ -539,9 +549,50 @@ function renderElIep() {
 
 // --- School declines ---
 let decState = { base: null, compare: null, topN: 20 };
-let declMap = null, declMarkers = null, declTiles = null;
+let declMap = null, declMarkers = null, declTiles = null, declGeoLayer = null;
+let mapGroupBy = 'school';
 
-function renderMap(rows) {
+function titleCaseWords(s) {
+  return s.replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase());
+}
+
+// Aggregates the full set of base/compare rows (not just the top-N shown in
+// the table) by community area, network, or ESB sub-district, using the
+// school->group lookups built from the enrollment-by-network/community-area
+// workbook (community_area, network) and a point-in-polygon join against the
+// Chalkbeat ESB sub-district boundaries (esb). Non-geographic "network"
+// values (Charter, Options, ISP, Contract, ...) are dropped for the network
+// view since they don't correspond to a place on the map.
+function computeGroupAggregates(allRows, groupBy) {
+  const groups = {};
+  allRows.forEach(r => {
+    let key = null;
+    if (groupBy === 'esb') {
+      key = ESB_MAP ? ESB_MAP[String(r.school_id)] : null;
+    } else if (GROUPS) {
+      const g = GROUPS[String(r.school_id)];
+      key = g ? g[groupBy] : null;
+      if (groupBy === 'network' && key && !/^Network \d+$/.test(key)) key = null;
+    }
+    if (!key) return;
+    if (!groups[key]) groups[key] = { key, base: 0, compare: 0, n: 0, lats: [], lons: [] };
+    const g = groups[key];
+    g.base += r.base; g.compare += r.compare; g.n += 1;
+    const loc = LOCS && LOCS[String(r.school_id)];
+    if (loc) { g.lats.push(loc[0]); g.lons.push(loc[1]); }
+  });
+  return Object.values(groups).map(g => {
+    const abs = g.compare - g.base;
+    const pct = g.base ? (abs / g.base * 100) : null;
+    return {
+      key: g.key, base: g.base, compare: g.compare, abs, pct, n: g.n,
+      lat: g.lats.length ? g.lats.reduce((a, b) => a + b, 0) / g.lats.length : null,
+      lon: g.lons.length ? g.lons.reduce((a, b) => a + b, 0) / g.lons.length : null,
+    };
+  });
+}
+
+function renderMap(topRows, allRows) {
   const mapEl = document.getElementById('dec-map');
   if (!mapEl || typeof L === 'undefined') return;
 
@@ -563,41 +614,106 @@ function renderMap(rows) {
   }
 
   mapEl.classList.toggle('dec-map-dark', isDark);
-
   declMarkers.clearLayers();
+  if (declGeoLayer) { declMap.removeLayer(declGeoLayer); declGeoLayer = null; }
 
   const good = cssVar('--success'), bad = cssVar('--decline');
-  const mapped = rows.filter(r => LOCS && LOCS[String(r.school_id)]);
-  const maxAbsPct = Math.max(1, ...rows.map(r => Math.abs(r.pct)));
-
-  mapped.forEach(r => {
-    const [lat, lon] = LOCS[String(r.school_id)];
-    const severity = Math.min(1, Math.abs(r.pct) / maxAbsPct);
-    const radius = 5 + severity * 16;
-    const color = r.pct < 0 ? bad : good;
-    const marker = L.circleMarker([lat, lon], {
-      radius, color: cssVar('--surface-1'), weight: 1.5, fillColor: color, fillOpacity: 0.72,
-    });
-    marker.bindPopup(
-      `<strong>${r.school_name}</strong><br>` +
-      `${decState.base}: ${fmtInt(r.base)}<br>` +
-      `${decState.compare}: ${fmtInt(r.compare)}<br>` +
-      `<span style="color:${color}; font-weight:600;">${fmtSignedInt(r.abs)} (${fmtSignedPct(r.pct)})</span>`
-    );
-    marker.addTo(declMarkers);
-  });
-
   const coverageEl = document.getElementById('dec-map-coverage');
-  if (coverageEl) {
-    coverageEl.textContent = mapped.length < rows.length
-      ? `Showing ${mapped.length} of ${rows.length} — a few schools have no matching location on file.`
-      : '';
+
+  if (mapGroupBy === 'esb') {
+    if (!ESB_GEO) { if (coverageEl) coverageEl.textContent = 'ESB district boundaries unavailable.'; setTimeout(() => declMap.invalidateSize(), 50); return; }
+    const aggs = computeGroupAggregates(allRows, 'esb');
+    const bySub = {}; aggs.forEach(a => { bySub[a.key] = a; });
+    const maxAbsPct = Math.max(1, ...aggs.filter(a => a.pct != null).map(a => Math.abs(a.pct)));
+
+    declGeoLayer = L.geoJSON(ESB_GEO, {
+      style: feat => {
+        const a = bySub[feat.properties.sub];
+        if (!a || a.pct == null) return { fillColor: cssVar('--text-muted'), fillOpacity: 0.12, color: cssVar('--surface-1'), weight: 1.5 };
+        const color = a.pct < 0 ? bad : good;
+        const intensity = 0.32 + 0.5 * Math.min(1, Math.abs(a.pct) / maxAbsPct);
+        return { fillColor: color, fillOpacity: intensity, color: cssVar('--surface-1'), weight: 1.5 };
+      },
+      onEachFeature: (feat, layer) => {
+        const a = bySub[feat.properties.sub];
+        const label = feat.properties.name;
+        if (a) {
+          const color = a.pct < 0 ? bad : good;
+          layer.bindPopup(
+            `<strong>${label}</strong> · ${a.n} school${a.n === 1 ? '' : 's'}<br>` +
+            `${decState.base}: ${fmtInt(a.base)}<br>${decState.compare}: ${fmtInt(a.compare)}<br>` +
+            `<span style="color:${color}; font-weight:600;">${fmtSignedInt(a.abs)} (${fmtSignedPct(a.pct)})</span>`
+          );
+        } else {
+          layer.bindPopup(`<strong>${label}</strong><br>No matched schools in this range.`);
+        }
+      },
+    }).addTo(declMap);
+
+    if (coverageEl) coverageEl.textContent = `Chicago's 10 Elected School Board districts (20 sub-districts). Shade tracks the size of the aggregate change.`;
+    const b = declGeoLayer.getBounds();
+    if (b.isValid()) declMap.fitBounds(b, { padding: [24, 24], maxZoom: 12 });
+
+  } else if (mapGroupBy === 'community_area' || mapGroupBy === 'network') {
+    const aggs = computeGroupAggregates(allRows, mapGroupBy).filter(a => a.lat != null && a.pct != null);
+    const maxAbsPct = Math.max(1, ...aggs.map(a => Math.abs(a.pct)));
+
+    aggs.forEach(a => {
+      const severity = Math.min(1, Math.abs(a.pct) / maxAbsPct);
+      const radius = 9 + severity * 24;
+      const color = a.pct < 0 ? bad : good;
+      const label = mapGroupBy === 'community_area' ? titleCaseWords(a.key) : a.key;
+      const marker = L.circleMarker([a.lat, a.lon], {
+        radius, color: cssVar('--surface-1'), weight: 1.5, fillColor: color, fillOpacity: 0.68,
+      });
+      marker.bindPopup(
+        `<strong>${label}</strong> · ${a.n} school${a.n === 1 ? '' : 's'}<br>` +
+        `${decState.base}: ${fmtInt(a.base)}<br>${decState.compare}: ${fmtInt(a.compare)}<br>` +
+        `<span style="color:${color}; font-weight:600;">${fmtSignedInt(a.abs)} (${fmtSignedPct(a.pct)})</span>`
+      );
+      marker.addTo(declMarkers);
+    });
+
+    const noun = mapGroupBy === 'community_area' ? 'community areas' : 'CPS networks (school-based networks only — charter/contract/options schools aren’t grouped geographically)';
+    if (coverageEl) coverageEl.textContent = `Bubbles are ${noun}, positioned at the average location of their schools and sized by aggregate change.`;
+    if (aggs.length) {
+      const bounds = L.latLngBounds(aggs.map(a => [a.lat, a.lon]));
+      declMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 11 });
+    }
+
+  } else {
+    // Per-school points (default)
+    const mapped = topRows.filter(r => LOCS && LOCS[String(r.school_id)]);
+    const maxAbsPct = Math.max(1, ...topRows.map(r => Math.abs(r.pct)));
+
+    mapped.forEach(r => {
+      const [lat, lon] = LOCS[String(r.school_id)];
+      const severity = Math.min(1, Math.abs(r.pct) / maxAbsPct);
+      const radius = 5 + severity * 16;
+      const color = r.pct < 0 ? bad : good;
+      const marker = L.circleMarker([lat, lon], {
+        radius, color: cssVar('--surface-1'), weight: 1.5, fillColor: color, fillOpacity: 0.72,
+      });
+      marker.bindPopup(
+        `<strong>${r.school_name}</strong><br>` +
+        `${decState.base}: ${fmtInt(r.base)}<br>` +
+        `${decState.compare}: ${fmtInt(r.compare)}<br>` +
+        `<span style="color:${color}; font-weight:600;">${fmtSignedInt(r.abs)} (${fmtSignedPct(r.pct)})</span>`
+      );
+      marker.addTo(declMarkers);
+    });
+
+    if (coverageEl) {
+      coverageEl.textContent = mapped.length < topRows.length
+        ? `Showing ${mapped.length} of ${topRows.length} — a few schools have no matching location on file.`
+        : '';
+    }
+    if (mapped.length) {
+      const bounds = L.latLngBounds(mapped.map(r => LOCS[String(r.school_id)]));
+      declMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
+    }
   }
 
-  if (mapped.length) {
-    const bounds = L.latLngBounds(mapped.map(r => LOCS[String(r.school_id)]));
-    declMap.fitBounds(bounds, { padding: [24, 24], maxZoom: 13 });
-  }
   setTimeout(() => declMap.invalidateSize(), 50);
 }
 
@@ -621,6 +737,7 @@ function renderDeclines() {
   const yearOpts = years.map(y => ({ value: y, label: y }));
   if (!decState.base) decState.base = years[0];
   if (!decState.compare) decState.compare = years[years.length - 1];
+  let lastRows = [], lastTop = [];
 
   function refresh() {
     const rows = computeDeclines();
@@ -647,8 +764,19 @@ function renderDeclines() {
     fillSelect('dec-school', schoolOpts, schoolOpts[0] ? schoolOpts[0].value : null, drawSchool);
     if (schoolOpts[0]) drawSchool(schoolOpts[0].value);
 
-    renderMap(top);
+    lastRows = rows; lastTop = top;
+    renderMap(top, rows);
   }
+
+  document.querySelectorAll('#dec-map-groupby button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) return;
+      document.querySelectorAll('#dec-map-groupby button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      mapGroupBy = btn.dataset.val;
+      renderMap(lastTop, lastRows);
+    });
+  });
 
   function drawSchool(sid) {
     const trend = SCHOOLS.schools.filter(r => String(r.school_id) === String(sid)).sort((a,b) => a.year.localeCompare(b.year));
@@ -694,8 +822,11 @@ Promise.all([
   fetch('data/summary.json?_=' + Date.now()).then(r => { if (!r.ok) throw new Error('summary.json HTTP ' + r.status); return r.json(); }),
   fetch('data/schools.json?_=' + Date.now()).then(r => { if (!r.ok) throw new Error('schools.json HTTP ' + r.status); return r.json(); }),
   fetch('data/school_locations.json?_=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-]).then(([sum, schools, locs]) => {
-  SUM = sum; SCHOOLS = schools; LOCS = locs;
+  fetch('data/school_groups.json?_=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch('data/school_esb.json?_=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+  fetch('data/esb_districts.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
+]).then(([sum, schools, locs, groups, esbMap, esbGeo]) => {
+  SUM = sum; SCHOOLS = schools; LOCS = locs; GROUPS = groups; ESB_MAP = esbMap; ESB_GEO = esbGeo;
   document.getElementById('meta').textContent =
     `Last checked ${new Date(sum.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${sum.years.length} school years of district data · ${schools.years.length} years of school-level data`;
   document.getElementById('content').style.display = '';
