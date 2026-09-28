@@ -7,7 +7,7 @@
 <meta name="description" content="Chicago Public Schools enrollment, race/ethnicity, English learner / IEP / low-income, and school-level decline trends, auto-updated from CPS's public demographic reports." />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@800;900&family=Fjalla+One&family=Libre+Franklin:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2/plotly.min.js"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -35,11 +35,11 @@
   html { background: var(--bg); }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: 'Libre Franklin', system-ui, sans-serif;
+    font-family: 'Montserrat', system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
-  h1, h2, h3 { font-family: 'Nunito Sans', sans-serif; font-weight: 900; letter-spacing: -0.01em; margin: 0; }
-  .label-font { font-family: 'Fjalla One', sans-serif; text-transform: uppercase; letter-spacing: 0.04em; }
+  h1, h2, h3 { font-family: 'Montserrat', sans-serif; font-weight: 900; letter-spacing: -0.01em; margin: 0; }
+  .label-font { font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.04em; }
   a { color: var(--primary); }
 
   /* Header */
@@ -51,7 +51,7 @@
     max-width: 1180px; margin: 0 auto; padding: 14px 20px;
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
   }
-  .brand { font-family: 'Fjalla One', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.92rem; color: var(--primary); white-space: nowrap; }
+  .brand { font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.92rem; color: var(--primary); white-space: nowrap; }
   .search-wrap { position: relative; width: 100%; max-width: 320px; }
   .search-input {
     width: 100%; font: inherit; font-size: 0.88rem; color: var(--text);
@@ -74,7 +74,7 @@
   .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 72px; }
 
   .eyebrow {
-    font-family: 'Fjalla One', sans-serif; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem;
+    font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.08em; font-size: 0.76rem;
     color: var(--primary); margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
   }
   .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 2px; background: var(--primary); display: inline-block; }
@@ -87,14 +87,14 @@
   /* Hero stat row */
   .hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 22px 0 30px; }
   .hero-stat { background: var(--primary); color: #fff; border-radius: 14px; padding: 18px 20px; }
-  .hero-stat .value { font-family: 'Nunito Sans', sans-serif; font-weight: 900; font-size: 1.9rem; line-height: 1; letter-spacing: -0.01em; }
+  .hero-stat .value { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.9rem; line-height: 1; letter-spacing: -0.01em; }
   .hero-stat .label { font-size: 0.82rem; margin-top: 8px; opacity: 0.92; line-height: 1.35; }
 
   /* Tabs */
   .tabbar { display: flex; gap: 6px; margin-bottom: 26px; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .tab-btn {
     appearance: none; border: none; background: none; cursor: pointer;
-    font-family: 'Fjalla One', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;
+    font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;
     font-size: 0.9rem; color: var(--text-muted); padding: 11px 6px; white-space: nowrap;
     border-bottom: 3px solid transparent; margin-bottom: -1px;
   }
@@ -230,7 +230,7 @@
     <!-- TAB A: HOW IS CPS CHANGING -->
     <section class="tab-panel active" id="panel-changing">
       <div class="changing-layout">
-        <nav class="group-list label-font" id="group-list" style="font-family:'Libre Franklin',sans-serif; text-transform:none; letter-spacing:normal;">
+        <nav class="group-list label-font" id="group-list" style="font-family:'Montserrat',sans-serif; text-transform:none; letter-spacing:normal;">
           <button data-group="all" class="active">All students</button>
           <button data-group="race">Race / ethnicity</button>
           <button data-group="el">English learners</button>
@@ -369,7 +369,7 @@ function baseLayout(extra) {
   extra = extra || {};
   const base = {
     paper_bgcolor: cssVar('--surface'), plot_bgcolor: cssVar('--surface'),
-    font: { family: 'Libre Franklin, system-ui, sans-serif', color: cssVar('--text-muted'), size: 12 },
+    font: { family: 'Montserrat, system-ui, sans-serif', color: cssVar('--text-muted'), size: 12 },
     margin: { l: 52, r: 24, t: 10, b: 36 },
     xaxis: { gridcolor: cssVar('--border'), linecolor: cssVar('--border'), tickfont: { color: cssVar('--text-muted') }, automargin: true },
     yaxis: { gridcolor: cssVar('--border'), linecolor: cssVar('--border'), tickfont: { color: cssVar('--text-muted') }, zerolinecolor: cssVar('--border'), automargin: true },
@@ -512,7 +512,7 @@ function declineStreak(years, field) {
 
 function groupTakeaway(key) {
   const def = GROUP_DEFS[key];
-  const years = SUM.years.filter(def.filter);
+  const years = SUM.years.filter(def.filter).filter(y => y.school_year >= GROUP_CHART_YEAR_START);
   if (years.length < 2) return `Not enough years of data yet for ${def.label.toLowerCase()}.`;
   const last = years[years.length - 1], first = years[0];
 
@@ -542,15 +542,18 @@ function groupTakeaway(key) {
   return `The share of ${def.label.toLowerCase()} has ${lastPct >= firstPct ? 'risen' : 'fallen'} from ${firstPct.toFixed(1)}% in ${first.school_year} to ${lastPct.toFixed(1)}% in ${last.school_year}.`;
 }
 
+const GROUP_CHART_YEAR_START = '2016-2017';
+
 function renderGroupChart() {
   const def = GROUP_DEFS[currentGroup];
-  const years = SUM.years.filter(def.filter);
+  const yearsFull = SUM.years.filter(def.filter);
+  const years = yearsFull.filter(y => y.school_year >= GROUP_CHART_YEAR_START);
   document.getElementById('group-takeaway').textContent = groupTakeaway(currentGroup);
 
   const availNote = document.getElementById('group-avail-note');
   const allYears = SUM.years;
-  if (years.length < allYears.length) {
-    availNote.textContent = `${def.label} data available from ${years[0].school_year} onward.`;
+  if (yearsFull.length < allYears.length) {
+    availNote.textContent = `${def.label} data available from ${yearsFull[0].school_year} onward.`;
   } else {
     availNote.textContent = '';
   }
@@ -576,27 +579,27 @@ function renderGroupChart() {
         const color = cssVar(m.accent);
         return {
           x: years.map(y => y.school_year), y: years.map(y => y[m.key] != null ? y[m.key]/y[def.totalField] : null),
-          name: m.label, type: 'scatter', mode: 'lines', stackgroup: 'g', line: { width: 0.5, color }, fillcolor: color,
+          name: m.label, type: 'bar', marker: { color },
           hovertemplate: '%{x}<br>' + m.label + ': <b>%{y:.1%}</b><extra></extra>',
         };
       });
-      Plotly.newPlot(el, traces, baseLayout({ yaxis: { tickformat: ',.0%', range: [0,1] } }), PLOTLY_CONFIG);
+      Plotly.newPlot(el, traces, baseLayout({ barmode: 'stack', bargap: 0.15, yaxis: { tickformat: ',.0%', range: [0,1] } }), PLOTLY_CONFIG);
     } else if (def.kind === 'total+breakdown') {
       const traces = def.breakdown.map(g => {
         const color = cssVar(g.accent);
         return {
           x: years.map(y => y.school_year), y: years.map(y => y[g.key] != null ? y[g.key]/y[def.totalField] : null),
-          name: g.label, type: 'scatter', mode: 'lines', stackgroup: 'g', line: { width: 0.5, color }, fillcolor: color,
+          name: g.label, type: 'bar', marker: { color },
           hovertemplate: '%{x}<br>' + g.label + ': <b>%{y:.1%}</b><extra></extra>',
         };
       });
-      Plotly.newPlot(el, traces, baseLayout({ yaxis: { tickformat: ',.0%', range: [0,1] } }), PLOTLY_CONFIG);
+      Plotly.newPlot(el, traces, baseLayout({ barmode: 'stack', bargap: 0.15, yaxis: { tickformat: ',.0%', range: [0,1] } }), PLOTLY_CONFIG);
     } else {
       Plotly.newPlot(el, [{
         x: years.map(y => y.school_year), y: years.map(y => y[def.pctKey]),
-        type: 'scatter', mode: 'lines+markers', line: { color: cssVar(def.accent), width: 2, shape: 'spline' },
-        marker: { size: 6, color: cssVar(def.accent) }, hovertemplate: '%{x}<br><b>%{y:.1%}</b><extra></extra>',
-      }], baseLayout({ yaxis: { tickformat: ',.0%', rangemode: 'tozero' } }), PLOTLY_CONFIG);
+        type: 'bar', marker: { color: cssVar(def.accent) },
+        hovertemplate: '%{x}<br><b>%{y:.1%}</b><extra></extra>',
+      }], baseLayout({ bargap: 0.15, yaxis: { tickformat: ',.0%', rangemode: 'tozero' } }), PLOTLY_CONFIG);
     }
   } else {
     // count
@@ -844,7 +847,7 @@ function renderMap(allRows) {
 function renderDeclines() {
   const years = SCHOOLS.years;
   const yearOpts = years.map(y => ({ value: y, label: y }));
-  if (!decState.base) decState.base = years[0];
+  if (!decState.base) decState.base = years[Math.max(0, years.length - 2)];
   if (!decState.compare) decState.compare = years[years.length - 1];
 
   function refresh() {
