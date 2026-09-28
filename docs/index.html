@@ -14,20 +14,21 @@
 <style>
   :root {
     color-scheme: light;
-    --bg: #ffffff;
+    --bg: #f4f8f5;
     --surface: #ffffff;
-    --surface-2: #faf9f5;
-    --text: #303030;
-    --text-muted: #6b6b63;
-    --border: #e4e2d2;
-    --primary: #1d5521;
-    --primary-dark: #143c17;
-    --primary-wash: #eaf1ea;
+    --surface-2: #eef4ef;
+    --text: #222222;
+    --text-muted: #4a5568;
+    --border: #dde4dd;
+    --primary: #1b4d25;
+    --primary-dark: #123318;
+    --primary-mid: #2c8c4c;
+    --primary-wash: #e7f1ea;
     --decline: #9a988c;
     --decline-strong: #7c7a6e;
-    --growth: #1d5521;
+    --growth: #1b4d25;
     --no-data: #e4e2d2;
-    --shadow: 0 1px 2px rgba(48,48,48,0.05), 0 8px 24px -12px rgba(48,48,48,0.14);
+    --shadow: 0 1px 2px rgba(20,40,25,0.06), 0 10px 24px -14px rgba(20,40,25,0.18);
     --series-1: #1d5521; --series-2: #b4842a; --series-3: #1a8f6b; --series-4: #c15a2e;
     --series-5: #5c4fae; --series-6: #b85d84; --series-7: #2b6fa0; --series-8: #a13f3d;
   }
@@ -44,14 +45,18 @@
 
   /* Header */
   .site-header {
-    position: sticky; top: 0; z-index: 40; background: var(--bg);
-    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 40; background: var(--primary);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }
   .site-header-inner {
-    max-width: 1180px; margin: 0 auto; padding: 14px 20px;
+    max-width: 1180px; margin: 0 auto; padding: 16px 20px;
     display: flex; align-items: center; justify-content: space-between; gap: 20px;
   }
-  .brand { font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.92rem; color: var(--primary); white-space: nowrap; }
+  .brand { font-family: 'Montserrat', sans-serif; font-weight: 800; letter-spacing: 0.01em; font-size: 1rem; color: #fff; white-space: nowrap; }
+  .header-badge {
+    font-family: 'Montserrat', sans-serif; font-size: 0.72rem; font-weight: 600; color: #fff;
+    background: rgba(255,255,255,0.15); border-radius: 999px; padding: 5px 12px; white-space: nowrap;
+  }
   .search-wrap { position: relative; width: 100%; max-width: 320px; }
   .search-wrap-inline { max-width: 480px; }
   .search-input {
@@ -87,25 +92,25 @@
 
   /* Hero stat row */
   .hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 22px 0 30px; }
-  .hero-stat { background: var(--primary); color: #fff; border-radius: 14px; padding: 18px 20px; }
+  .hero-stat { background: var(--primary); color: #fff; border-radius: 10px; padding: 18px 20px; }
   .hero-stat .value { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.9rem; line-height: 1; letter-spacing: -0.01em; }
   .hero-stat .label { font-size: 0.82rem; margin-top: 8px; opacity: 0.92; line-height: 1.35; }
 
   /* Tabs */
   .tabbar { display: flex; gap: 6px; margin-bottom: 26px; border-bottom: 1px solid var(--border); overflow-x: auto; }
   .tab-btn {
-    appearance: none; border: none; background: none; cursor: pointer;
-    font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.04em;
-    font-size: 0.9rem; color: var(--text-muted); padding: 11px 6px; white-space: nowrap;
-    border-bottom: 3px solid transparent; margin-bottom: -1px;
+    appearance: none; cursor: pointer;
+    font-family: 'Montserrat', sans-serif; font-weight: 600; letter-spacing: 0.01em;
+    font-size: 0.92rem; color: var(--primary); padding: 10px 18px; white-space: nowrap;
+    background: var(--surface); border: 1px solid var(--border); border-bottom: none;
+    border-radius: 8px 8px 0 0; margin-bottom: -1px;
   }
-  .tab-btn:hover { color: var(--text); }
-  .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
-  .tab-btn + .tab-btn { margin-left: 18px; }
+  .tab-btn:hover { background: var(--primary-wash); }
+  .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  .card { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 14px; padding: 20px 18px 16px; margin-bottom: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow); border-radius: 10px; padding: 22px 22px 18px; margin-bottom: 20px; }
   .card h2 { font-size: 1.05rem; margin: 0 0 3px; }
   .card .note { font-size: 0.8rem; color: var(--text-muted); margin: 4px 0 10px; max-width: 68ch; }
   .card-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin: 4px 0 14px; }
@@ -167,7 +172,7 @@
   table.data-table tbody tr.clickable { cursor: pointer; }
 
   .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 0 0 20px; }
-  .stat-tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .stat-tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
   .stat-tile .label { color: var(--text-muted); font-size: 0.76rem; margin-bottom: 6px; }
   .stat-tile .value { font-size: 1.4rem; font-weight: 700; }
   .stat-tile .value.neg { color: var(--decline-strong); }
@@ -202,6 +207,7 @@
 <div class="site-header">
   <div class="site-header-inner">
     <div class="brand">Kids First Chicago &middot; District Data</div>
+    <span class="header-badge" id="header-badge" style="display:none;"></span>
   </div>
 </div>
 
@@ -319,6 +325,10 @@
             <div class="school-header"><h2 id="school-name"></h2></div>
             <p class="note" id="school-sub"></p>
           </div>
+          <div class="card" id="school-budget-card">
+            <h2>FY2027 budget</h2>
+            <div id="school-budget"></div>
+          </div>
           <div class="card">
             <h2>Enrollment trend</h2>
             <div class="plot" id="school-line"></div>
@@ -331,10 +341,6 @@
           <div class="card">
             <h2>Compared to its network and community area</h2>
             <div class="compare-tiles" id="school-compare"></div>
-          </div>
-          <div class="card" id="school-budget-card">
-            <h2>FY2027 budget</h2>
-            <div id="school-budget"></div>
           </div>
         </div>
       </div>
@@ -359,7 +365,12 @@
             </span>
           </label>
         </div>
-        <h2 id="budget-table-title">Schools sorted by enrollment shortfall (actual vs. budgeted)</h2>
+        <h2 id="budget-gap-chart-title">Biggest gaps between budgeted and actual enrollment</h2>
+        <p class="note">The schools furthest below their FY2027 budgeted enrollment, and furthest above it. Click a bar to open that school&rsquo;s profile.</p>
+        <div class="plot" id="budget-gap-chart" style="height:440px;"></div>
+      </div>
+      <div class="card">
+        <h2 id="budget-table-title">All schools, sorted by enrollment shortfall (actual vs. budgeted)</h2>
         <div class="table-toolbar"><button type="button" class="download-btn" id="budget-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
         <div class="table-wrap" id="budget-table"></div>
       </div>
@@ -1023,11 +1034,50 @@ function budgetTypeMatches(rec, filter) {
   return true;
 }
 
+function renderBudgetGapChart(rows) {
+  const el = document.getElementById('budget-gap-chart');
+  const eligible = rows.filter(r => r.pct != null);
+  if (!eligible.length) {
+    el.innerHTML = '<p class="note">No schools match this filter.</p>';
+    return;
+  }
+  const N = 8;
+  const sorted = eligible.slice().sort((a, b) => a.pct - b.pct);
+  const below = sorted.slice(0, N);
+  const above = sorted.slice(-N).filter(r => !below.includes(r));
+  const combined = below.concat(above).sort((a, b) => a.pct - b.pct);
+
+  const good = cssVar('--growth'), bad = cssVar('--decline-strong');
+  const truncate = s => s.length > 38 ? s.slice(0, 36) + '…' : s;
+
+  Plotly.newPlot('budget-gap-chart', [{
+    x: combined.map(r => r.pct),
+    y: combined.map(r => truncate(r.school_name)),
+    type: 'bar', orientation: 'h', cliponaxis: false,
+    marker: { color: combined.map(r => r.pct >= 0 ? good : bad) },
+    text: combined.map(r => fmtSignedPct(r.pct)),
+    textposition: 'outside',
+    customdata: combined.map(r => [r.school_name, r.budgeted_enrollment, r.actual_enrollment, r.change]),
+    hovertemplate: '<b>%{customdata[0]}</b><br>Budgeted: %{customdata[1]:,}<br>Actual: %{customdata[2]:,}<br>Change: %{customdata[3]:+,}<br>Variance: %{x:.1f}%<extra></extra>',
+  }], baseLayout({
+    showlegend: false,
+    xaxis: { ticksuffix: '%', zeroline: true },
+    yaxis: { autorange: 'reversed' },
+  }), PLOTLY_CONFIG).then(gd => {
+    gd.on('plotly_click', evt => {
+      if (!evt.points || !evt.points.length) return;
+      const rec = combined[evt.points[0].pointIndex];
+      if (rec) openSchool(rec.school_id);
+    });
+  });
+}
+
 function renderBudgetTab() {
   const unmatchedNote = document.getElementById('budget-unmatched-note');
   if (!BUDGET) {
     unmatchedNote.textContent = '';
     document.getElementById('budget-stats').innerHTML = '';
+    document.getElementById('budget-gap-chart').innerHTML = '';
     document.getElementById('budget-table').innerHTML = '<p class="note">FY2027 budget data isn’t available yet.</p>';
     return;
   }
@@ -1056,6 +1106,8 @@ function renderBudgetTab() {
     ].map(t => `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`).join('');
 
     withChange.sort((a, b) => (a.pct ?? 0) - (b.pct ?? 0));
+
+    renderBudgetGapChart(withChange);
 
     renderTable('budget-table', [
       { key: 'school_name', label: 'School' },
@@ -1152,6 +1204,11 @@ Promise.all([
   buildSchoolIndex();
   document.getElementById('meta').textContent =
     `Last checked ${new Date(sum.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${sum.years.length} school years of district data · ${schools.years.length} years of school-level data`;
+  const headerBadge = document.getElementById('header-badge');
+  if (headerBadge) {
+    headerBadge.textContent = `Updated ${new Date(sum.last_built).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    headerBadge.style.display = '';
+  }
   document.getElementById('content').style.display = '';
   document.getElementById('status').style.display = 'none';
   renderHeroStats();
