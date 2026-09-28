@@ -133,6 +133,15 @@
   }
   .radio-group button.active { background: var(--surface-1); color: var(--series-1); box-shadow: var(--shadow); }
 
+  .table-toolbar { display: flex; justify-content: flex-end; margin: 0 14px 8px; }
+  .download-btn {
+    appearance: none; cursor: pointer; font: inherit; display: inline-flex; align-items: center; gap: 6px;
+    font-size: 0.78rem; font-weight: 600; color: var(--text-secondary);
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .download-btn:hover { color: var(--series-1); background: var(--surface-1); }
+  .download-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
   .table-wrap { overflow-x: auto; margin: 0 14px 16px; border-top: 1px solid var(--border); }
   table.data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
   table.data-table th, table.data-table td { text-align: right; padding: 8px 10px; white-space: nowrap; }
@@ -193,7 +202,10 @@
         <div class="plot" id="ov-yoy" style="height:300px;"></div>
       </div>
       <div class="section-label"><p class="eyebrow">Data</p></div>
-      <div class="card"><div class="table-wrap" id="ov-table"></div></div>
+      <div class="card">
+        <div class="table-toolbar"><button type="button" class="download-btn" id="ov-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
+        <div class="table-wrap" id="ov-table"></div>
+      </div>
     </section>
 
     <!-- RACE -->
@@ -224,7 +236,10 @@
         <div class="plot" id="race-yoy" style="height:300px;"></div>
       </div>
       <div class="section-label"><p class="eyebrow">Data</p></div>
-      <div class="card"><div class="table-wrap" id="race-table"></div></div>
+      <div class="card">
+        <div class="table-toolbar"><button type="button" class="download-btn" id="race-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
+        <div class="table-wrap" id="race-table"></div>
+      </div>
     </section>
 
     <!-- EL / IEP / LOW INCOME -->
@@ -245,7 +260,10 @@
         <div class="plot" id="el-yoy" style="height:300px;"></div>
       </div>
       <div class="section-label"><p class="eyebrow">Data</p></div>
-      <div class="card"><div class="table-wrap" id="el-table"></div></div>
+      <div class="card">
+        <div class="table-toolbar"><button type="button" class="download-btn" id="el-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
+        <div class="table-wrap" id="el-table"></div>
+      </div>
     </section>
 
     <!-- SCHOOL DECLINES -->
@@ -265,6 +283,7 @@
       <div class="stat-row" id="dec-stats"></div>
       <div class="card">
         <h2 id="dec-table-title">Largest enrollment declines</h2>
+        <div class="table-toolbar"><button type="button" class="download-btn" id="dec-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
         <div class="table-wrap" id="dec-table"></div>
       </div>
       <div class="card">
@@ -368,7 +387,7 @@ function yoyBarChart(elId, categories, current, previous, opts) {
   }], baseLayout({ showlegend: false, margin: { l: 52, r: 24, t: 28, b: 36 }, yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, ticksuffix: '%', zeroline: true, automargin: true } }), PLOTLY_CONFIG);
 }
 
-function renderTable(elId, columns, rows) {
+function renderTable(elId, columns, rows, downloadName) {
   const thead = '<thead><tr>' + columns.map(c => `<th>${c.label}</th>`).join('') + '</tr></thead>';
   const tbody = '<tbody>' + rows.map(r => '<tr>' + columns.map(c => {
     const raw = r[c.key];
@@ -377,6 +396,28 @@ function renderTable(elId, columns, rows) {
     return `<td class="${cls}">${c.fmt ? c.fmt(raw) : (raw ?? '—')}</td>`;
   }).join('') + '</tr>').join('') + '</tbody>';
   document.getElementById(elId).innerHTML = `<table class="data-table">${thead}${tbody}</table>`;
+  if (downloadName) {
+    const btn = document.getElementById(elId + '-dl');
+    if (btn) btn.onclick = () => downloadCSV(downloadName, columns, rows);
+  }
+}
+
+function downloadCSV(filename, columns, rows) {
+  const esc = v => {
+    if (v == null) return '';
+    const str = String(v);
+    return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+  };
+  const cell = (c, r) => { const raw = r[c.key]; return c.fmt ? c.fmt(raw) : (raw ?? ''); };
+  const header = columns.map(c => esc(c.label)).join(',');
+  const lines = rows.map(r => columns.map(c => esc(cell(c, r))).join(','));
+  const csv = [header, ...lines].join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function fillSelect(elId, options, selectedValue, onChange) {
@@ -455,7 +496,8 @@ function renderOverview() {
 
   renderTable('ov-table',
     [{ key: 'school_year', label: 'Year' }, ...OV_GROUPS.map(g => ({ key: g.key, label: g.label, fmt: fmtInt }))],
-    [...years].reverse().map(y => ({ school_year: y.school_year, total_enrollment: y.total_enrollment, grade_pre_k: y.grade_pre_k, grade_kindergarten: y.grade_kindergarten, grade_elementary: y.grade_elementary, grade_middle: y.grade_middle, grade_high: y.grade_high }))
+    [...years].reverse().map(y => ({ school_year: y.school_year, total_enrollment: y.total_enrollment, grade_pre_k: y.grade_pre_k, grade_kindergarten: y.grade_kindergarten, grade_elementary: y.grade_elementary, grade_middle: y.grade_middle, grade_high: y.grade_high })),
+    'cps-enrollment-overview.csv'
   );
 }
 
@@ -510,7 +552,8 @@ function renderRace() {
 
   renderTable('race-table',
     [{ key: 'school_year', label: 'Year' }, ...RACE_META.map(m => ({ key: m.key, label: m.label, fmt: fmtInt }))],
-    [...raceYears].reverse()
+    [...raceYears].reverse(),
+    'cps-enrollment-by-race.csv'
   );
 }
 
@@ -543,7 +586,8 @@ function renderElIep() {
      { key: 'el_n', label: 'English learners', fmt: fmtInt }, { key: 'el_pct', label: 'EL %', fmt: fmtPct },
      { key: 'swd_n', label: 'Students w/ disabilities', fmt: fmtInt }, { key: 'swd_pct', label: 'SWD %', fmt: fmtPct },
      { key: 'low_income_n', label: 'Low income', fmt: fmtInt }, { key: 'low_income_pct', label: 'Low income %', fmt: fmtPct }],
-    [...elYears].reverse()
+    [...elYears].reverse(),
+    'cps-enrollment-el-iep-lowincome.csv'
   );
 }
 
@@ -758,7 +802,7 @@ function renderDeclines() {
       { key: 'compare', label: decState.compare, fmt: fmtInt },
       { key: 'abs', label: 'Change', fmt: fmtSignedInt, signColor: true },
       { key: 'pct', label: '% Change', fmt: fmtSignedPct, signColor: true },
-    ], top);
+    ], top, `cps-enrollment-declines-${decState.base}-to-${decState.compare}.csv`);
 
     const schoolOpts = top.map(r => ({ value: r.school_id, label: r.school_name }));
     fillSelect('dec-school', schoolOpts, schoolOpts[0] ? schoolOpts[0].value : null, drawSchool);
