@@ -917,11 +917,16 @@ function renderMap(allRows) {
   setTimeout(() => declMap.invalidateSize(), 50);
 }
 
+function ensureDecStateDefaults() {
+  const years = SCHOOLS.years;
+  if (!decState.base) decState.base = years[Math.max(0, years.length - 2)];
+  if (!decState.compare) decState.compare = years[years.length - 1];
+}
+
 function renderDeclines() {
   const years = SCHOOLS.years;
   const yearOpts = years.map(y => ({ value: y, label: y }));
-  if (!decState.base) decState.base = years[Math.max(0, years.length - 2)];
-  if (!decState.compare) decState.compare = years[years.length - 1];
+  ensureDecStateDefaults();
 
   function refresh() {
     const rows = computeDeclines();
@@ -993,7 +998,8 @@ function renderStudentMix(sid) {
   const order = SCHOOL_DEMO.race_categories;
   const labels = SCHOOL_DEMO.race_category_labels || {};
   el.innerHTML =
-    '<div class="plot" id="school-race-chart" style="height:64px;"></div>' +
+    '<div class="plot" id="school-race-chart" style="height:56px;"></div>' +
+    '<div class="map-legend" id="school-race-legend" style="margin-top:2px;"></div>' +
     '<div class="compare-tiles" id="school-mix-tiles" style="margin-top:14px;"></div>' +
     '<p class="note" id="school-mix-year"></p>';
 
@@ -1010,12 +1016,18 @@ function renderStudentMix(sid) {
     };
   });
   Plotly.newPlot('school-race-chart', traces, baseLayout({
-    barmode: 'stack', showlegend: true,
+    barmode: 'stack', showlegend: false,
     margin: { l: 4, r: 4, t: 4, b: 4 },
     xaxis: { visible: false, range: [0, 100], fixedrange: true },
     yaxis: { visible: false, fixedrange: true },
-    legend: { orientation: 'h', y: -0.5, font: { size: 11 } },
   }), Object.assign({}, PLOTLY_CONFIG, { displayModeBar: false }));
+
+  // Custom HTML legend (in fixed category order) instead of Plotly's own --
+  // its default legend doesn't wrap cleanly under a chart this short.
+  document.getElementById('school-race-legend').innerHTML = present.map(k => {
+    const i = order.indexOf(k);
+    return `<span class="swatch"><i style="background:${raceColor(i)}"></i> ${labels[k] || k}</span>`;
+  }).join('');
 
   const tiles = [];
   function tile(label, pct) {
@@ -1066,6 +1078,7 @@ function renderSchoolView(sid) {
   renderStudentMix(sid);
 
   // Compare to network & community area
+  ensureDecStateDefaults();
   const rows = computeDeclines();
   const thisRow = rows.find(r => String(r.school_id) === sid);
   const tiles = [];
