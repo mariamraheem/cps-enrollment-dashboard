@@ -53,10 +53,11 @@
   }
   .brand { font-family: 'Montserrat', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.92rem; color: var(--primary); white-space: nowrap; }
   .search-wrap { position: relative; width: 100%; max-width: 320px; }
+  .search-wrap-inline { max-width: 480px; }
   .search-input {
-    width: 100%; font: inherit; font-size: 0.88rem; color: var(--text);
+    width: 100%; font: inherit; font-size: 0.94rem; color: var(--text);
     background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
-    padding: 9px 12px 9px 34px;
+    padding: 11px 12px 11px 36px;
   }
   .search-input:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
   .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--text-muted); pointer-events: none; }
@@ -138,7 +139,6 @@
   .group-list button.active { background: var(--primary-wash); color: var(--primary); font-weight: 700; border-color: var(--border); }
 
   .takeaway { font-size: 1rem; font-weight: 600; color: var(--text); margin: 0 0 14px; padding: 12px 14px; background: var(--primary-wash); border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0; }
-  .avail-note { font-size: 0.78rem; color: var(--text-muted); margin-top: 8px; }
 
   details.data-expander { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
   details.data-expander summary { cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--primary); list-style: none; display: flex; align-items: center; gap: 6px; }
@@ -202,11 +202,6 @@
 <div class="site-header">
   <div class="site-header-inner">
     <div class="brand">Kids First Chicago &middot; District Data</div>
-    <div class="search-wrap">
-      <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6.5"/><path d="M17.5 17.5 13.5 13.5" stroke-linecap="round"/></svg>
-      <input type="text" id="school-search" class="search-input" placeholder="Find a school&hellip;" autocomplete="off" />
-      <div class="search-results" id="school-search-results"></div>
-    </div>
   </div>
 </div>
 
@@ -222,10 +217,10 @@
 
   <div id="content" style="display:none;">
     <div class="tabbar" id="tabbar">
-      <button class="tab-btn active" data-tab="changing">How is CPS changing?</button>
-      <button class="tab-btn" data-tab="losing">Which schools are losing students?</button>
-      <button class="tab-btn" data-tab="school">School view</button>
-      <button class="tab-btn" data-tab="budget">School budgets</button>
+      <button class="tab-btn active" data-tab="changing">Enrollment Trends</button>
+      <button class="tab-btn" data-tab="losing">Declining Enrollment</button>
+      <button class="tab-btn" data-tab="school">School Profiles</button>
+      <button class="tab-btn" data-tab="budget">School Budgets</button>
     </div>
 
     <!-- TAB A: HOW IS CPS CHANGING -->
@@ -249,7 +244,6 @@
             </div>
             <p class="takeaway" id="group-takeaway"></p>
             <div class="plot" id="group-chart"></div>
-            <p class="avail-note" id="group-avail-note"></p>
             <details class="data-expander" id="group-data-expander">
               <summary>View data table</summary>
               <div class="table-toolbar"><button type="button" class="download-btn" id="group-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
@@ -310,7 +304,15 @@
 
     <!-- TAB C: SCHOOL VIEW -->
     <section class="tab-panel" id="panel-school">
-      <div id="school-empty" class="card"><p class="note">Search for a school above, or click one on the map, to see its enrollment trend, student mix, and how it compares to its network and community area.</p></div>
+      <div class="card">
+        <h2>Find a school</h2>
+        <div class="search-wrap search-wrap-inline">
+          <svg class="search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="9" r="6.5"/><path d="M17.5 17.5 13.5 13.5" stroke-linecap="round"/></svg>
+          <input type="text" id="school-search" class="search-input" placeholder="Search by school name&hellip;" autocomplete="off" />
+          <div class="search-results" id="school-search-results"></div>
+        </div>
+      </div>
+      <div id="school-empty" class="card"><p class="note">Search for a school above, or click one on the map in &ldquo;Declining Enrollment&rdquo;, to see its enrollment trend, student mix, and how it compares to its network and community area.</p></div>
       <div id="school-content" style="display:none;">
         <div class="school-cards">
           <div class="card">
@@ -540,7 +542,7 @@ function renderHeroStats() {
   `).join('');
 }
 
-// --------------------------- Tab A: How is CPS changing? --------------
+// --------------------------- Tab A: Enrollment Trends --------------------
 function declineStreak(years, field) {
   let streak = 0;
   for (let i = years.length - 1; i > 0; i--) {
@@ -586,17 +588,8 @@ const GROUP_CHART_YEAR_START = '2016-2017';
 
 function renderGroupChart() {
   const def = GROUP_DEFS[currentGroup];
-  const yearsFull = SUM.years.filter(def.filter);
-  const years = yearsFull.filter(y => y.school_year >= GROUP_CHART_YEAR_START);
+  const years = SUM.years.filter(def.filter).filter(y => y.school_year >= GROUP_CHART_YEAR_START);
   document.getElementById('group-takeaway').textContent = groupTakeaway(currentGroup);
-
-  const availNote = document.getElementById('group-avail-note');
-  const allYears = SUM.years;
-  if (yearsFull.length < allYears.length) {
-    availNote.textContent = `${def.label} data available from ${yearsFull[0].school_year} onward.`;
-  } else {
-    availNote.textContent = '';
-  }
 
   const el = 'group-chart';
   if (currentMode === 'change') {
@@ -934,7 +927,7 @@ function renderDeclines() {
   refresh();
 }
 
-// --------------------------- Tab C: School view -------------------------
+// --------------------------- Tab C: School Profiles ----------------------
 function schoolTrend(sid) {
   return SCHOOLS.schools.filter(r => String(r.school_id) === String(sid)).sort((a,b) => a.year.localeCompare(b.year));
 }
@@ -982,7 +975,7 @@ function renderSchoolView(sid) {
   else document.getElementById('school-yoy').innerHTML = '<p class="note">Not enough years to compute year-on-year change.</p>';
 
   document.getElementById('school-mix').innerHTML =
-    '<p class="note">Detailed race/ethnicity, English learner, IEP, and low-income breakdowns aren\'t published per school in CPS\'s current demographic reports — those figures are only available district-wide (see &ldquo;How is CPS changing?&rdquo;).</p>';
+    '<p class="note">Detailed race/ethnicity, English learner, IEP, and low-income breakdowns aren\'t published per school in CPS\'s current demographic reports — those figures are only available district-wide (see &ldquo;Enrollment Trends&rdquo;).</p>';
 
   // Compare to network & community area
   const rows = computeDeclines();
