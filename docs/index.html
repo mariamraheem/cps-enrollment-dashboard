@@ -14,7 +14,7 @@
 <style>
   :root {
     color-scheme: light;
-    --bg: #f4f8f5;
+    --bg: #f2f2f2;
     --surface: #ffffff;
     --surface-2: #eef4ef;
     --text: #222222;
@@ -143,8 +143,6 @@
   .group-list button:hover { background: var(--surface-2); }
   .group-list button.active { background: var(--primary-wash); color: var(--primary); font-weight: 700; border-color: var(--border); }
 
-  .takeaway { font-size: 1rem; font-weight: 600; color: var(--text); margin: 0 0 14px; padding: 12px 14px; background: var(--primary-wash); border-left: 3px solid var(--primary); border-radius: 0 8px 8px 0; }
-
   details.data-expander { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
   details.data-expander summary { cursor: pointer; font-size: 0.86rem; font-weight: 600; color: var(--primary); list-style: none; display: flex; align-items: center; gap: 6px; }
   details.data-expander summary::-webkit-details-marker { display: none; }
@@ -224,9 +222,8 @@
   <div id="content" style="display:none;">
     <div class="tabbar" id="tabbar">
       <button class="tab-btn active" data-tab="changing">Enrollment Trends</button>
-      <button class="tab-btn" data-tab="losing">Declining Enrollment</button>
-      <button class="tab-btn" data-tab="school">School Profiles</button>
-      <button class="tab-btn" data-tab="budget">School Budgets</button>
+      <button class="tab-btn" data-tab="losing">Geographic Trends</button>
+      <button class="tab-btn" data-tab="school">School-level Trends</button>
     </div>
 
     <!-- TAB A: HOW IS CPS CHANGING -->
@@ -248,7 +245,6 @@
                 <button type="button" data-mode="change">% Change</button>
               </span>
             </div>
-            <p class="takeaway" id="group-takeaway"></p>
             <div class="plot" id="group-chart"></div>
             <details class="data-expander" id="group-data-expander">
               <summary>View data table</summary>
@@ -268,17 +264,9 @@
         <div class="card-controls">
           <label class="field">Base year<select id="dec-base"></select></label>
           <label class="field">Compare to<select id="dec-compare"></select></label>
-          <label class="field">Schools shown
-            <span><input type="range" id="dec-topn" min="5" max="50" value="20" step="5" /> <span class="range-value" id="dec-topn-val">20</span></span>
-          </label>
         </div>
       </div>
       <div class="stat-row" id="dec-stats"></div>
-      <div class="card">
-        <h2 id="dec-table-title">Largest enrollment changes</h2>
-        <div class="table-toolbar"><button type="button" class="download-btn" id="dec-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
-        <div class="table-wrap" id="dec-table"></div>
-      </div>
       <div class="card">
         <h2>Where the declines are</h2>
         <p class="note">Shade tracks the size of the change. Click an area for its schools. <span id="dec-map-coverage"></span></p>
@@ -306,6 +294,11 @@
           <div class="table-wrap" id="no-boundary-table"></div>
         </div>
       </div>
+      <div class="card">
+        <h2 id="dec-table-title">All schools</h2>
+        <div class="table-toolbar"><button type="button" class="download-btn" id="dec-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
+        <div class="table-wrap" id="dec-table"></div>
+      </div>
     </section>
 
     <!-- TAB C: SCHOOL VIEW -->
@@ -318,7 +311,7 @@
           <div class="search-results" id="school-search-results"></div>
         </div>
       </div>
-      <div id="school-empty" class="card"><p class="note">Search for a school above, or click one on the map in &ldquo;Declining Enrollment&rdquo;, to see its enrollment trend, student mix, and how it compares to its network and community area.</p></div>
+      <div id="school-empty" class="card"><p class="note">Search for a school above, or click one on the map in &ldquo;Geographic Trends&rdquo;, to see its enrollment trend, student mix, and how it compares to its network and community area.</p></div>
       <div id="school-content" style="display:none;">
         <div class="school-cards">
           <div class="card">
@@ -346,45 +339,6 @@
       </div>
     </section>
 
-    <!-- TAB D: SCHOOL BUDGETS -->
-    <section class="tab-panel" id="panel-budget">
-      <div class="card">
-        <h2>FY2027 school budgets</h2>
-        <p class="note">Every school's FY2027 budget was built using its <strong>Fall 2025</strong> enrollment (school year 2025-2026). This compares that budgeted count to the school's <strong>actual</strong> Fall 2026 enrollment (school year 2026-2027) now that the year has started, alongside a per-pupil funding figure. Traditional/specialty schools are funded mostly through centrally-provided staff rather than cash, so their per-pupil figure below covers only the Need-Based Flexible and Title I dollars &mdash; it understates their real per-pupil resourcing. Charter and Contract/ALOP/SAFE schools are funded through per-pupil dollar contracts, so their figure is closer to a full per-pupil total. <span id="budget-unmatched-note"></span></p>
-        <p class="note"><a href="https://www.cps.edu/about/finance/budget/budget-2027/more-information-2027/" target="_blank" rel="noopener">CPS FY2027 School Budget Overview</a></p>
-      </div>
-      <div class="stat-row" id="budget-stats"></div>
-      <div class="card">
-        <div class="card-controls">
-          <label class="field">School type
-            <span class="radio-group" id="budget-type-filter">
-              <button type="button" data-val="all" class="active">All</button>
-              <button type="button" data-val="district">Traditional &amp; Specialty</button>
-              <button type="button" data-val="charter">Charter</button>
-              <button type="button" data-val="contract">Contract / ALOP / SAFE</button>
-            </span>
-          </label>
-        </div>
-        <h2 id="budget-gap-chart-title">Biggest gaps between budgeted and actual enrollment</h2>
-        <p class="note">The schools furthest below their FY2027 budgeted enrollment, and furthest above it. Click a bar to open that school&rsquo;s profile.</p>
-        <div class="plot" id="budget-gap-chart" style="height:440px;"></div>
-      </div>
-      <div class="card">
-        <h2>Per-pupil funding by school</h2>
-        <p class="note">Darker dots mark schools with more per-pupil funding. Traditional/specialty schools' dots reflect only their Need-Based Flexible and Title I dollars, not their full resourcing &mdash; see the note above. <span id="budget-map-coverage"></span></p>
-        <div class="map-legend">
-          <span class="swatch"><i style="background:#e7f1ea"></i> Lower per-pupil funding</span>
-          <span class="swatch"><i style="background:#123318"></i> Higher per-pupil funding</span>
-          <span class="swatch"><i style="background:var(--no-data)"></i> No data</span>
-        </div>
-        <div id="budget-funding-map" style="height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:#fbfbfa;"></div>
-      </div>
-      <div class="card">
-        <h2 id="budget-table-title">All schools, sorted by enrollment shortfall (actual vs. budgeted)</h2>
-        <div class="table-toolbar"><button type="button" class="download-btn" id="budget-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
-        <div class="table-wrap" id="budget-table"></div>
-      </div>
-    </section>
   </div>
 
   <div class="status" id="status">Loading data&hellip;</div>
@@ -497,7 +451,6 @@ let GEO = { community_areas: null, networks: null, attendance_elementary: null, 
 let SCHOOL_LATEST = {}; // school_id -> {school_id, school_name}
 let BUDGET = null; // { fiscal_year, budget_enrollment_year, actual_enrollment_year, source, schools: [...], unmatched: [...] }
 let BUDGET_BY_ID = {}; // school_id (string) -> budget record
-let budgetTypeFilter = 'all';
 
 const BUDGET_BASIS_LABEL = {
   district_flex_title1: 'Need-Based Flexible + Title I per-pupil rate (excludes centrally-provided staff)',
@@ -564,53 +517,11 @@ function renderHeroStats() {
 }
 
 // --------------------------- Tab A: Enrollment Trends --------------------
-function declineStreak(years, field) {
-  let streak = 0;
-  for (let i = years.length - 1; i > 0; i--) {
-    if (years[i][field] != null && years[i-1][field] != null && years[i][field] < years[i-1][field]) streak++;
-    else break;
-  }
-  return streak;
-}
-
-function groupTakeaway(key) {
-  const def = GROUP_DEFS[key];
-  const years = SUM.years.filter(def.filter).filter(y => y.school_year >= GROUP_CHART_YEAR_START);
-  if (years.length < 2) return `Not enough years of data yet for ${def.label.toLowerCase()}.`;
-  const last = years[years.length - 1], first = years[0];
-
-  if (def.kind === 'total+breakdown') {
-    const streak = declineStreak(years, def.totalField);
-    if (streak >= 3) {
-      const streakStart = years[years.length - 1 - streak];
-      const pct = (last[def.totalField] - streakStart[def.totalField]) / streakStart[def.totalField] * 100;
-      return `Enrollment has fallen every year since ${streakStart.school_year}, down ${Math.abs(pct).toFixed(1)}% over that span.`;
-    }
-    const prev = years[years.length - 2];
-    const pct = (last[def.totalField] - prev[def.totalField]) / prev[def.totalField] * 100;
-    return `Total enrollment ${pct >= 0 ? 'rose' : 'fell'} ${Math.abs(pct).toFixed(1)}% from ${prev.school_year} to ${last.school_year}.`;
-  }
-  if (def.kind === 'multi') {
-    const present = def.series.filter(m => first[m.key] != null && last[m.key] != null);
-    let worst = null;
-    present.forEach(m => {
-      const pct = (last[m.key] - first[m.key]) / first[m.key] * 100;
-      if (!worst || Math.abs(pct) > Math.abs(worst.pct)) worst = { label: m.label, pct };
-    });
-    if (!worst) return `Race/ethnicity trends aren't available yet.`;
-    return `Since ${first.school_year}, ${worst.label} enrollment has ${worst.pct >= 0 ? 'grown' : 'fallen'} ${Math.abs(worst.pct).toFixed(1)}%, more than any other group.`;
-  }
-  // single (el / iep / lowincome)
-  const firstPct = first[def.pctKey] * 100, lastPct = last[def.pctKey] * 100;
-  return `The share of ${def.label.toLowerCase()} has ${lastPct >= firstPct ? 'risen' : 'fallen'} from ${firstPct.toFixed(1)}% in ${first.school_year} to ${lastPct.toFixed(1)}% in ${last.school_year}.`;
-}
-
 const GROUP_CHART_YEAR_START = '2016-2017';
 
 function renderGroupChart() {
   const def = GROUP_DEFS[currentGroup];
   const years = SUM.years.filter(def.filter).filter(y => y.school_year >= GROUP_CHART_YEAR_START);
-  document.getElementById('group-takeaway').textContent = groupTakeaway(currentGroup);
 
   const el = 'group-chart';
   if (currentMode === 'change') {
@@ -712,10 +623,9 @@ document.getElementById('mode-toggle').addEventListener('click', e => {
 });
 
 // --------------------------- Tab B: declines + map ---------------------
-let decState = { base: null, compare: null, topN: 20 };
+let decState = { base: null, compare: null };
 let declMap = null, declTiles = null, declGeoLayer = null;
 let mapGroupBy = 'community_area';
-let budgetMap = null, budgetMapTiles = null, budgetMapGroup = null;
 
 function computeDeclines() {
   const byYear = {};
@@ -764,16 +674,6 @@ function divergingColor(pct, maxAbsPct) {
   const target = t < 0 ? declineC : growthC;
   const f = Math.abs(t);
   const rgb = mid.map((m, i) => Math.round(m + (target[i] - m) * f));
-  return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
-}
-
-// Sequential light (--primary-wash) -> dark (--primary-dark), for a magnitude
-// (not polarity) measure like per-pupil funding.
-function sequentialColor(v, min, max) {
-  if (v == null) return cssVar('--no-data');
-  const t = max > min ? Math.max(0, Math.min(1, (v - min) / (max - min))) : 0.5;
-  const lo = [231, 241, 234], hi = [18, 51, 24];
-  const rgb = lo.map((c, i) => Math.round(c + (hi[i] - c) * t));
   return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
@@ -939,15 +839,14 @@ function renderDeclines() {
       { label: 'Median % change', value: fmtSignedPct(medianPct), cls: medianPct < 0 ? 'neg' : 'pos' },
     ].map(t => `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`).join('');
 
-    const top = rows.slice(0, decState.topN);
-    document.getElementById('dec-table-title').textContent = `Largest enrollment changes (${decState.base} → ${decState.compare})`;
+    document.getElementById('dec-table-title').textContent = `All schools (${decState.base} → ${decState.compare})`;
     renderTable('dec-table', [
       { key: 'school_name', label: 'School' },
       { key: 'base', label: decState.base, fmt: fmtInt },
       { key: 'compare', label: decState.compare, fmt: fmtInt },
       { key: 'abs', label: 'Change', fmt: fmtSignedInt, signColor: true },
       { key: 'pct', label: '% Change', fmt: fmtSignedPct, signColor: true },
-    ], top, `cps-enrollment-declines-${decState.base}-to-${decState.compare}.csv`, row => openSchool(row.school_id));
+    ], rows, `cps-enrollment-declines-${decState.base}-to-${decState.compare}.csv`, row => openSchool(row.school_id));
 
     renderMap(rows);
   }
@@ -964,15 +863,11 @@ function renderDeclines() {
 
   fillSelect('dec-base', yearOpts, decState.base, v => { decState.base = v; refresh(); });
   fillSelect('dec-compare', yearOpts, decState.compare, v => { decState.compare = v; refresh(); });
-  const slider = document.getElementById('dec-topn');
-  slider.value = decState.topN;
-  document.getElementById('dec-topn-val').textContent = decState.topN;
-  slider.oninput = () => { decState.topN = parseInt(slider.value, 10); document.getElementById('dec-topn-val').textContent = decState.topN; refresh(); };
 
   refresh();
 }
 
-// --------------------------- Tab C: School Profiles ----------------------
+// --------------------------- Tab C: School-level Trends -------------------
 function schoolTrend(sid) {
   return SCHOOLS.schools.filter(r => String(r.school_id) === String(sid)).sort((a,b) => a.year.localeCompare(b.year));
 }
@@ -1115,168 +1010,6 @@ function renderSchoolView(sid) {
   }
 }
 
-// --------------------------- Tab D: School budgets ----------------------
-function budgetTypeMatches(rec, filter) {
-  if (filter === 'all') return true;
-  if (filter === 'district') return rec.funding_basis === 'district_flex_title1' || rec.funding_basis === 'district_altspec_title1';
-  if (filter === 'charter') return rec.funding_basis === 'charter_per_capita_tuition';
-  if (filter === 'contract') return rec.funding_basis === 'contract_component_sum';
-  return true;
-}
-
-function renderBudgetGapChart(rows) {
-  const el = document.getElementById('budget-gap-chart');
-  const eligible = rows.filter(r => r.pct != null);
-  if (!eligible.length) {
-    el.innerHTML = '<p class="note">No schools match this filter.</p>';
-    return;
-  }
-  const N = 8;
-  const sorted = eligible.slice().sort((a, b) => a.pct - b.pct);
-  const below = sorted.slice(0, N);
-  const above = sorted.slice(-N).filter(r => !below.includes(r));
-  const combined = below.concat(above).sort((a, b) => a.pct - b.pct);
-
-  const good = cssVar('--growth'), bad = cssVar('--decline-strong');
-  const truncate = s => s.length > 38 ? s.slice(0, 36) + '…' : s;
-
-  Plotly.newPlot('budget-gap-chart', [{
-    x: combined.map(r => r.pct),
-    y: combined.map(r => truncate(r.school_name)),
-    type: 'bar', orientation: 'h', cliponaxis: false,
-    marker: { color: combined.map(r => r.pct >= 0 ? good : bad) },
-    text: combined.map(r => fmtSignedPct(r.pct)),
-    textposition: 'outside',
-    customdata: combined.map(r => [r.school_name, r.budgeted_enrollment, r.actual_enrollment, r.change]),
-    hovertemplate: '<b>%{customdata[0]}</b><br>Budgeted: %{customdata[1]:,}<br>Actual: %{customdata[2]:,}<br>Change: %{customdata[3]:+,}<br>Variance: %{x:.1f}%<extra></extra>',
-  }], baseLayout({
-    showlegend: false,
-    xaxis: { ticksuffix: '%', zeroline: true },
-    yaxis: { autorange: 'reversed' },
-  }), PLOTLY_CONFIG).then(gd => {
-    gd.on('plotly_click', evt => {
-      if (!evt.points || !evt.points.length) return;
-      const rec = combined[evt.points[0].pointIndex];
-      if (rec) openSchool(rec.school_id);
-    });
-  });
-}
-
-function renderBudgetMap(rows) {
-  const mapEl = document.getElementById('budget-funding-map');
-  if (!mapEl || typeof L === 'undefined') return;
-
-  if (!budgetMap) {
-    budgetMap = L.map('budget-funding-map', { scrollWheelZoom: false, attributionControl: true });
-    budgetMapTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-      maxZoom: 16, opacity: 0.55,
-    }).addTo(budgetMap);
-    budgetMap.setView([41.85, -87.68], 10.4);
-  }
-  if (budgetMapGroup) { budgetMap.removeLayer(budgetMapGroup); budgetMapGroup = null; }
-
-  const coverageEl = document.getElementById('budget-map-coverage');
-  const eligible = rows.filter(r => r.per_pupil_funding != null);
-  if (!LOCS || !eligible.length) {
-    if (coverageEl) coverageEl.textContent = LOCS ? 'No schools with per-pupil funding data for this filter.' : 'School location data unavailable.';
-    setTimeout(() => budgetMap.invalidateSize(), 50);
-    return;
-  }
-
-  const vals = eligible.map(r => r.per_pupil_funding);
-  const min = Math.min(...vals), max = Math.max(...vals);
-  const group = L.layerGroup();
-  const missing = [];
-  eligible.forEach(r => {
-    const loc = LOCS[String(r.school_id)];
-    if (!loc) { missing.push(r); return; }
-    const marker = L.circleMarker([loc[0], loc[1]], {
-      radius: 6, weight: 1.5, color: '#fff', fillColor: sequentialColor(r.per_pupil_funding, min, max), fillOpacity: 0.92,
-    });
-    marker.bindTooltip(
-      `<strong>${r.school_name}</strong><br>Per-pupil funding: $${fmtInt(Math.round(r.per_pupil_funding))}`,
-      { sticky: true }
-    );
-    marker.on('click', () => openSchool(r.school_id));
-    marker.addTo(group);
-  });
-  group.addTo(budgetMap);
-  budgetMapGroup = group;
-
-  if (coverageEl) coverageEl.textContent = `${eligible.length - missing.length} of ${eligible.length} schools with funding data shown` + (missing.length ? `; ${missing.length} without a mapped location omitted.` : '.');
-
-  const layers = group.getLayers();
-  if (layers.length) {
-    const b = L.featureGroup(layers).getBounds();
-    if (b.isValid()) budgetMap.fitBounds(b, { padding: [24, 24], maxZoom: 12 });
-  }
-  setTimeout(() => budgetMap.invalidateSize(), 50);
-}
-
-function renderBudgetTab() {
-  const unmatchedNote = document.getElementById('budget-unmatched-note');
-  if (!BUDGET) {
-    unmatchedNote.textContent = '';
-    document.getElementById('budget-stats').innerHTML = '';
-    document.getElementById('budget-gap-chart').innerHTML = '';
-    document.getElementById('budget-table').innerHTML = '<p class="note">FY2027 budget data isn’t available yet.</p>';
-    return;
-  }
-  if (BUDGET.unmatched && BUDGET.unmatched.length) {
-    unmatchedNote.textContent = `${BUDGET.unmatched.length} school${BUDGET.unmatched.length === 1 ? '' : 's'} in the budget workbook couldn’t be matched to the enrollment data by name and ${BUDGET.unmatched.length === 1 ? 'is' : 'are'} excluded below: ${BUDGET.unmatched.join(', ')}.`;
-  } else {
-    unmatchedNote.textContent = '';
-  }
-
-  function refresh() {
-    const filtered = BUDGET.schools.filter(r => budgetTypeMatches(r, budgetTypeFilter) && r.budgeted_enrollment != null && r.actual_enrollment != null);
-    const withChange = filtered.map(r => {
-      const change = r.actual_enrollment - r.budgeted_enrollment;
-      const pct = r.budgeted_enrollment ? change / r.budgeted_enrollment * 100 : null;
-      return Object.assign({}, r, { change, pct });
-    });
-
-    const below = withChange.filter(r => r.change < 0).length;
-    const pctsSorted = withChange.map(r => r.pct).filter(p => p != null).sort((a, b) => a - b);
-    const medianPct = pctsSorted.length ? pctsSorted[Math.floor(pctsSorted.length / 2)] : null;
-
-    document.getElementById('budget-stats').innerHTML = [
-      { label: 'Schools with FY2027 budget data', value: fmtInt(withChange.length), cls: '' },
-      { label: 'Enrolled below their FY2027 budgeted count', value: fmtInt(below), cls: 'neg' },
-      { label: 'Median enrollment variance', value: fmtSignedPct(medianPct), cls: medianPct != null && medianPct < 0 ? 'neg' : 'pos' },
-    ].map(t => `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`).join('');
-
-    withChange.sort((a, b) => (a.pct ?? 0) - (b.pct ?? 0));
-
-    renderBudgetGapChart(withChange);
-    renderBudgetMap(withChange);
-
-    renderTable('budget-table', [
-      { key: 'school_name', label: 'School' },
-      { key: 'school_type', label: 'Type' },
-      { key: 'network', label: 'Network' },
-      { key: 'budgeted_enrollment', label: `Budgeted (${BUDGET.budget_enrollment_year})`, fmt: fmtInt },
-      { key: 'actual_enrollment', label: `Actual (${BUDGET.actual_enrollment_year})`, fmt: fmtInt },
-      { key: 'change', label: 'Change', fmt: fmtSignedInt, signColor: true },
-      { key: 'pct', label: '% Change', fmt: fmtSignedPct, signColor: true },
-      { key: 'per_pupil_funding', label: 'Per-Pupil Funding', fmt: v => v == null ? '—' : '$' + fmtInt(Math.round(v)) },
-    ], withChange, `cps-fy2027-budget-${budgetTypeFilter}.csv`, row => openSchool(row.school_id));
-  }
-
-  document.querySelectorAll('#budget-type-filter button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (btn.classList.contains('active')) return;
-      document.querySelectorAll('#budget-type-filter button').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      budgetTypeFilter = btn.dataset.val;
-      refresh();
-    });
-  });
-
-  refresh();
-}
-
 // --------------------------- Search ------------------------------------
 function buildSchoolIndex() {
   const byId = {};
@@ -1317,8 +1050,6 @@ document.getElementById('tabbar').addEventListener('click', e => {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
   if (tab === 'losing' && !renderedTabs.has('losing')) { renderDeclines(); renderedTabs.add('losing'); }
   else if (tab === 'losing' && declMap) { window.dispatchEvent(new Event('resize')); setTimeout(() => declMap.invalidateSize(), 50); }
-  else if (tab === 'budget' && !renderedTabs.has('budget')) { renderBudgetTab(); renderedTabs.add('budget'); }
-  else if (tab === 'budget' && budgetMap) { window.dispatchEvent(new Event('resize')); setTimeout(() => budgetMap.invalidateSize(), 50); }
 });
 
 window.addEventListener('hashchange', () => {
