@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 """
 Parse the FY2027 CPS school budget overview workbooks (data/raw/budget/*.xlsx)
-into docs/data/budget.json -- a per-school record of what enrollment each
-school's FY2027 budget was built on (Fall 2025 / school year 2025-2026) next
-to a per-pupil funding figure, so the dashboard can show it against actual
-Fall 2026 (school year 2026-2027) enrollment from docs/data/schools.json.
+into docs/data/budget.json -- a per-school per-pupil funding figure next to
+that school's own 2025-2026 and 2026-2027 enrollment, so the dashboard can
+show how enrollment has moved since the FY2027 budget was built.
+
+Enrollment for both years comes from docs/data/schools.json (the same
+demographic-report pipeline every other number on the dashboard uses) rather
+than from the budget workbooks' own enrollment columns, so a school's count
+here always matches what's shown elsewhere on the site. The workbook's own
+enrollment column is used only as a fallback for a school schools.json has no
+2025-2026 row for.
 
 This never talks to the network -- run fetch_budget.py first to populate
 data/raw/budget/.
@@ -88,13 +94,16 @@ def load_school_index():
     assert latest == ACTUAL_ENROLLMENT_YEAR, f"schools.json latest year is {latest}, expected {ACTUAL_ENROLLMENT_YEAR}"
     by_norm = {}
     actual_enrollment = {}
+    budget_year_enrollment = {}
     for r in schools["schools"]:
         if r["year"] == latest:
             by_norm[norm(r["school_name"])] = r["school_id"]
             actual_enrollment[r["school_id"]] = r["total"]
+        if r["year"] == BUDGET_ENROLLMENT_YEAR:
+            budget_year_enrollment[r["school_id"]] = r["total"]
     with open(DATA_DIR / "school_groups.json") as f:
         groups = json.load(f)
-    return by_norm, actual_enrollment, groups
+    return by_norm, actual_enrollment, budget_year_enrollment, groups
 
 
 def match_school_id(raw_name, by_norm):
@@ -116,7 +125,7 @@ def col_index(header_row, label):
     return None
 
 
-def build_district_managed(by_norm, actual_enrollment, groups):
+def build_district_managed(by_norm, actual_enrollment, budget_year_enrollment, groups):
     path = RAW_DIR / "fy2027_district_managed.xlsx"
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb["Traditional"]
@@ -140,7 +149,9 @@ def build_district_managed(by_norm, actual_enrollment, groups):
         sid = match_school_id(name, by_norm)
         if sid == "skip":
             continue
-        budgeted_enrollment = r[idx["fall25_total"]]
+        budgeted_enrollment = budget_year_enrollment.get(sid) if sid else None
+        if budgeted_enrollment is None:
+            budgeted_enrollment = r[idx["fall25_total"]]  # fallback: no 2025-2026 row in schools.json
         per_pupil_flex = r[idx["per_pupil_flex"]] or 0
         per_pupil_title1 = r[idx["per_pupil_title1"]] or 0
         rec = {
@@ -164,7 +175,7 @@ def build_district_managed(by_norm, actual_enrollment, groups):
     return records, unmatched
 
 
-def build_altspec(by_norm, actual_enrollment):
+def build_altspec(by_norm, actual_enrollment, budget_year_enrollment):
     path = RAW_DIR / "fy2027_district_managed.xlsx"
     wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
     ws = wb["Alt-Spec"]
@@ -185,6 +196,9 @@ def build_altspec(by_norm, actual_enrollment):
         sid = match_school_id(name, by_norm)
         if sid == "skip":
             continue
+        budgeted_enrollment = budget_year_enrollment.get(sid) if sid else None
+        if budgeted_enrollment is None:
+            budgeted_enrollment = r[idx["fall25_total"]]  # fallback: no 2025-2026 row in schools.json
         per_pupil_title1 = r[idx["per_pupil_title1"]] or 0
         rec = {
             "school_name": str(name).strip(),
@@ -192,7 +206,7 @@ def build_altspec(by_norm, actual_enrollment):
             "school_type": r[idx["type"]],
             "network": r[idx["network"]],
             "community_area": r[idx["community_area"]],
-            "budgeted_enrollment": r[idx["fall25_total"]],
+            "budgeted_enrollment": budgeted_enrollment,
             "actual_enrollment": actual_enrollment.get(sid),
             "per_pupil_title1_funding": round(per_pupil_title1, 2) if per_pupil_title1 else None,
             "per_pupil_funding": round(per_pupil_title1, 2) if per_pupil_title1 else None,
@@ -205,7 +219,7 @@ def build_altspec(by_norm, actual_enrollment):
     return records, unmatched
 
 
-def build_nondistrict(by_norm, actual_enrollment, groups):
+def build_nondistrict(by_norm, actual_enrollment, budget_year_enrollment, groups):
     path = RAW_DIR / "fy2027_charter_contract_alop.xlsx"
     wb = openpyxl.load_workbook(path, data_only=True)
     records, unmatched = [], []
@@ -227,7 +241,9 @@ def build_nondistrict(by_norm, actual_enrollment, groups):
         sid = match_school_id(name, by_norm)
         if sid == "skip":
             continue
-        enr = row[idx_enr]
+        enr = budget_year_enrollment.get(sid) if sid else None
+        if enr is None:
+            enr = row[idx_enr]  # fallback: no 2025-2026 row in schools.json
         tuition = row[idx_tuition]
         per_pupil = round(tuition / enr, 2) if (tuition and enr) else None
         rec = {
@@ -266,7 +282,9 @@ def build_nondistrict(by_norm, actual_enrollment, groups):
         sid = match_school_id(name, by_norm)
         if sid == "skip":
             continue
-        enr = row[idx_enr]
+        enr = budget_year_enrollment.get(sid) if sid else None
+        if enr is None:
+            enr = row[idx_enr]  # fallback: no 2025-2026 row in schools.json
         total = sum_cols(row, comp_idxs)
         per_pupil = round(total / enr, 2) if (total and enr) else None
         rec = {
@@ -290,10 +308,10 @@ def build_nondistrict(by_norm, actual_enrollment, groups):
 
 
 def main():
-    by_norm, actual_enrollment, groups = load_school_index()
-    district_records, district_unmatched = build_district_managed(by_norm, actual_enrollment, groups)
-    altspec_records, altspec_unmatched = build_altspec(by_norm, actual_enrollment)
-    nondistrict_records, nondistrict_unmatched = build_nondistrict(by_norm, actual_enrollment, groups)
+    by_norm, actual_enrollment, budget_year_enrollment, groups = load_school_index()
+    district_records, district_unmatched = build_district_managed(by_norm, actual_enrollment, budget_year_enrollment, groups)
+    altspec_records, altspec_unmatched = build_altspec(by_norm, actual_enrollment, budget_year_enrollment)
+    nondistrict_records, nondistrict_unmatched = build_nondistrict(by_norm, actual_enrollment, budget_year_enrollment, groups)
 
     all_records = district_records + altspec_records + nondistrict_records
     all_records.sort(key=lambda r: r["school_name"])

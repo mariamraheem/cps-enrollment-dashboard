@@ -298,11 +298,11 @@
           <span class="swatch"><i style="background:var(--growth)"></i> Growth</span>
           <span class="swatch"><i style="background:var(--no-data)"></i> No data</span>
         </div>
-        <div id="dec-map" style="height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:#f7f6f1;"></div>
+        <div id="dec-map" style="height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:#fbfbfa;"></div>
         <div class="area-detail" id="area-detail"></div>
         <div class="area-detail" id="no-boundary-wrap" style="display:none;">
-          <h3>Schools with no attendance boundary (citywide / selective enrollment)</h3>
-          <p class="note">These schools draw from the whole city rather than a geographic boundary, so they're listed here instead of drawn on the map.</p>
+          <h3>Schools without a mapped location</h3>
+          <p class="note">These schools don't have a location in CPS's published data, so they're listed here instead of shown as a dot on the map.</p>
           <div class="table-wrap" id="no-boundary-table"></div>
         </div>
       </div>
@@ -368,6 +368,16 @@
         <h2 id="budget-gap-chart-title">Biggest gaps between budgeted and actual enrollment</h2>
         <p class="note">The schools furthest below their FY2027 budgeted enrollment, and furthest above it. Click a bar to open that school&rsquo;s profile.</p>
         <div class="plot" id="budget-gap-chart" style="height:440px;"></div>
+      </div>
+      <div class="card">
+        <h2>Per-pupil funding by school</h2>
+        <p class="note">Darker dots mark schools with more per-pupil funding. Traditional/specialty schools' dots reflect only their Need-Based Flexible and Title I dollars, not their full resourcing &mdash; see the note above. <span id="budget-map-coverage"></span></p>
+        <div class="map-legend">
+          <span class="swatch"><i style="background:#e7f1ea"></i> Lower per-pupil funding</span>
+          <span class="swatch"><i style="background:#123318"></i> Higher per-pupil funding</span>
+          <span class="swatch"><i style="background:var(--no-data)"></i> No data</span>
+        </div>
+        <div id="budget-funding-map" style="height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border); background:#fbfbfa;"></div>
       </div>
       <div class="card">
         <h2 id="budget-table-title">All schools, sorted by enrollment shortfall (actual vs. budgeted)</h2>
@@ -482,7 +492,7 @@ function fillSelect(elId, options, selectedValue, onChange) {
 }
 
 // ---------------------------------------------------------------------
-let SUM = null, SCHOOLS = null, LOCS = null, GROUPS = null, ESB_MAP = null, ESB_GEO = null;
+let SUM = null, SCHOOLS = null, LOCS = null, GROUPS = null, ESB_MAP = null, ESB_GEO = null, SCHOOL_DEMO = null;
 let GEO = { community_areas: null, networks: null, attendance_elementary: null, attendance_highschool: null, schools_no_boundary: null };
 let SCHOOL_LATEST = {}; // school_id -> {school_id, school_name}
 let BUDGET = null; // { fiscal_year, budget_enrollment_year, actual_enrollment_year, source, schools: [...], unmatched: [...] }
@@ -705,6 +715,7 @@ document.getElementById('mode-toggle').addEventListener('click', e => {
 let decState = { base: null, compare: null, topN: 20 };
 let declMap = null, declTiles = null, declGeoLayer = null;
 let mapGroupBy = 'community_area';
+let budgetMap = null, budgetMapTiles = null, budgetMapGroup = null;
 
 function computeDeclines() {
   const byYear = {};
@@ -756,6 +767,16 @@ function divergingColor(pct, maxAbsPct) {
   return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
 }
 
+// Sequential light (--primary-wash) -> dark (--primary-dark), for a magnitude
+// (not polarity) measure like per-pupil funding.
+function sequentialColor(v, min, max) {
+  if (v == null) return cssVar('--no-data');
+  const t = max > min ? Math.max(0, Math.min(1, (v - min) / (max - min))) : 0.5;
+  const lo = [231, 241, 234], hi = [18, 51, 24];
+  const rgb = lo.map((c, i) => Math.round(c + (hi[i] - c) * t));
+  return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+}
+
 function renderAreaDetail(label, aggOrRow, rows) {
   const wrap = document.getElementById('area-detail');
   const schoolRows = rows.map(r => ({ school_id: r.school_id, school_name: r.school_name, base: r.base, compare: r.compare, abs: r.abs, pct: r.pct }))
@@ -778,7 +799,7 @@ function renderMap(allRows) {
     declMap = L.map('dec-map', { scrollWheelZoom: false, attributionControl: true });
     declTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
       attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
-      maxZoom: 16,
+      maxZoom: 16, opacity: 0.55,
     }).addTo(declMap);
     declMap.setView([41.85, -87.68], 10.4);
   }
@@ -850,38 +871,46 @@ function renderMap(allRows) {
     if (b.isValid()) declMap.fitBounds(b, { padding: [24, 24], maxZoom: 12 });
 
   } else {
-    // School: real attendance-boundary polygons, colored by that school's own change
-    const feats = [];
-    (GEO.attendance_elementary ? GEO.attendance_elementary.features : []).forEach(f => feats.push(f));
-    (GEO.attendance_highschool ? GEO.attendance_highschool.features : []).forEach(f => feats.push(f));
+    // School: a dot per school at its point location, colored by that school's own change
+    if (!LOCS) {
+      if (coverageEl) coverageEl.textContent = 'School location data unavailable.';
+      setTimeout(() => declMap.invalidateSize(), 50);
+      return;
+    }
     const maxAbsPct = Math.max(1, ...allRows.filter(r => r.pct != null).map(r => Math.abs(r.pct)));
-    const merged = { type: 'FeatureCollection', features: feats };
+    const group = L.layerGroup();
+    const missing = [];
+    allRows.forEach(r => {
+      const loc = LOCS[String(r.school_id)];
+      if (!loc) { missing.push(r); return; }
+      const marker = L.circleMarker([loc[0], loc[1]], {
+        radius: 6, weight: 1.5, color: '#fff', fillColor: divergingColor(r.pct, maxAbsPct), fillOpacity: 0.92,
+      });
+      marker.bindTooltip(
+        `<strong>${r.school_name}</strong><br>${decState.base}: ${fmtInt(r.base)} &rarr; ${decState.compare}: ${fmtInt(r.compare)}<br>${fmtSignedInt(r.abs)} (${fmtSignedPct(r.pct)})`,
+        { sticky: true }
+      );
+      marker.on('click', () => openSchool(r.school_id));
+      marker.addTo(group);
+    });
+    group.addTo(declMap);
+    declGeoLayer = group;
 
-    declGeoLayer = L.geoJSON(merged, {
-      style: feat => {
-        const r = byId[String(feat.properties.school_id)];
-        return { fillColor: divergingColor(r ? r.pct : null, maxAbsPct), fillOpacity: 0.82, color: '#fff', weight: 1 };
-      },
-      onEachFeature: (feat, layer) => {
-        const r = byId[String(feat.properties.school_id)];
-        const label = (r && r.school_name) || feat.properties.school_name;
-        layer.bindTooltip(r
-          ? `<strong>${label}</strong><br>${decState.base}: ${fmtInt(r.base)} &rarr; ${decState.compare}: ${fmtInt(r.compare)}<br>${fmtSignedInt(r.abs)} (${fmtSignedPct(r.pct)})`
-          : `<strong>${label}</strong><br>No data in this range`, { sticky: true });
-        layer.on('click', () => { if (r) openSchool(r.school_id); });
-      },
-    }).addTo(declMap);
-
-    const nb = GEO.schools_no_boundary;
-    if (nb) {
+    if (missing.length) {
+      noBoundaryWrap.style.display = '';
       renderTable('no-boundary-table', [
         { key: 'school_name', label: 'School' },
-        { key: 'total', label: nb.year, fmt: fmtInt },
-      ], nb.schools, null, row => openSchool(row.school_id));
+        { key: 'compare', label: decState.compare, fmt: fmtInt },
+      ], missing, null, row => openSchool(row.school_id));
+    } else {
+      noBoundaryWrap.style.display = 'none';
     }
-    if (coverageEl) coverageEl.textContent = `${feats.length} school attendance areas shown; ${nb ? nb.schools.length : 0} citywide/selective schools listed below instead.`;
-    const b = declGeoLayer.getBounds();
-    if (b.isValid()) declMap.fitBounds(b, { padding: [24, 24], maxZoom: 12 });
+    if (coverageEl) coverageEl.textContent = `${allRows.length - missing.length} of ${allRows.length} schools shown` + (missing.length ? `; ${missing.length} without a mapped location listed below.` : '.');
+    const layers = group.getLayers();
+    if (layers.length) {
+      const b = L.featureGroup(layers).getBounds();
+      if (b.isValid()) declMap.fitBounds(b, { padding: [24, 24], maxZoom: 12 });
+    }
   }
 
   document.getElementById('area-detail').innerHTML = '';
@@ -951,6 +980,55 @@ function openSchool(sid) {
   renderSchoolView(sid);
 }
 
+const RACE_COLOR_VARS = ['--series-1', '--series-2', '--series-3', '--series-4', '--series-5', '--series-6', '--series-7', '--series-8'];
+function raceColor(i) { return i >= 0 && i < RACE_COLOR_VARS.length ? cssVar(RACE_COLOR_VARS[i]) : cssVar('--text-muted'); }
+
+function renderStudentMix(sid) {
+  const el = document.getElementById('school-mix');
+  const d = SCHOOL_DEMO ? SCHOOL_DEMO.schools[sid] : null;
+  if (!d || !d.race || !Object.keys(d.race).length) {
+    el.innerHTML = '<p class="note">Detailed race/ethnicity, English learner, IEP, and low-income breakdowns aren\'t available for this school.</p>';
+    return;
+  }
+  const order = SCHOOL_DEMO.race_categories;
+  const labels = SCHOOL_DEMO.race_category_labels || {};
+  el.innerHTML =
+    '<div class="plot" id="school-race-chart" style="height:64px;"></div>' +
+    '<div class="compare-tiles" id="school-mix-tiles" style="margin-top:14px;"></div>' +
+    '<p class="note" id="school-mix-year"></p>';
+
+  const present = order.filter(k => d.race[k] && d.race[k].n > 0);
+  const traces = present.map(k => {
+    const i = order.indexOf(k);
+    const pct = d.race[k].pct;
+    return {
+      x: [pct == null ? 0 : pct * 100], y: ['mix'], type: 'bar', orientation: 'h', name: labels[k] || k,
+      marker: { color: raceColor(i), line: { color: cssVar('--surface'), width: 2 } },
+      text: pct != null && pct >= 0.06 ? fmtPct(pct) : '', textposition: 'inside', insidetextanchor: 'middle',
+      textfont: { color: '#fff', size: 11, family: 'Montserrat, sans-serif' },
+      hovertemplate: `<b>${labels[k] || k}</b><br>${fmtInt(d.race[k].n)} students (${fmtPct(pct)})<extra></extra>`,
+    };
+  });
+  Plotly.newPlot('school-race-chart', traces, baseLayout({
+    barmode: 'stack', showlegend: true,
+    margin: { l: 4, r: 4, t: 4, b: 4 },
+    xaxis: { visible: false, range: [0, 100], fixedrange: true },
+    yaxis: { visible: false, fixedrange: true },
+    legend: { orientation: 'h', y: -0.5, font: { size: 11 } },
+  }), Object.assign({}, PLOTLY_CONFIG, { displayModeBar: false }));
+
+  const tiles = [];
+  function tile(label, pct) {
+    tiles.push(`<div class="stat-tile"><div class="label">${label}</div><div class="value">${fmtPct(pct)}</div></div>`);
+  }
+  tile('English learners', d.el_pct);
+  tile('Students with IEPs', d.iep_pct);
+  tile('Low income', d.low_income_pct);
+  document.getElementById('school-mix-tiles').innerHTML = tiles.join('');
+  document.getElementById('school-mix-year').textContent =
+    `Race/ethnicity: ${SCHOOL_DEMO.race_year} school year. English learner / IEP / low-income: ${SCHOOL_DEMO.el_iep_year} school year.`;
+}
+
 function renderSchoolView(sid) {
   const trend = schoolTrend(sid);
   if (!trend.length) {
@@ -985,8 +1063,7 @@ function renderSchoolView(sid) {
   if (cats.length) yoyBarChart('school-yoy', cats, cur, prev);
   else document.getElementById('school-yoy').innerHTML = '<p class="note">Not enough years to compute year-on-year change.</p>';
 
-  document.getElementById('school-mix').innerHTML =
-    '<p class="note">Detailed race/ethnicity, English learner, IEP, and low-income breakdowns aren\'t published per school in CPS\'s current demographic reports — those figures are only available district-wide (see &ldquo;Enrollment Trends&rdquo;).</p>';
+  renderStudentMix(sid);
 
   // Compare to network & community area
   const rows = computeDeclines();
@@ -1072,6 +1149,58 @@ function renderBudgetGapChart(rows) {
   });
 }
 
+function renderBudgetMap(rows) {
+  const mapEl = document.getElementById('budget-funding-map');
+  if (!mapEl || typeof L === 'undefined') return;
+
+  if (!budgetMap) {
+    budgetMap = L.map('budget-funding-map', { scrollWheelZoom: false, attributionControl: true });
+    budgetMapTiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+      maxZoom: 16, opacity: 0.55,
+    }).addTo(budgetMap);
+    budgetMap.setView([41.85, -87.68], 10.4);
+  }
+  if (budgetMapGroup) { budgetMap.removeLayer(budgetMapGroup); budgetMapGroup = null; }
+
+  const coverageEl = document.getElementById('budget-map-coverage');
+  const eligible = rows.filter(r => r.per_pupil_funding != null);
+  if (!LOCS || !eligible.length) {
+    if (coverageEl) coverageEl.textContent = LOCS ? 'No schools with per-pupil funding data for this filter.' : 'School location data unavailable.';
+    setTimeout(() => budgetMap.invalidateSize(), 50);
+    return;
+  }
+
+  const vals = eligible.map(r => r.per_pupil_funding);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const group = L.layerGroup();
+  const missing = [];
+  eligible.forEach(r => {
+    const loc = LOCS[String(r.school_id)];
+    if (!loc) { missing.push(r); return; }
+    const marker = L.circleMarker([loc[0], loc[1]], {
+      radius: 6, weight: 1.5, color: '#fff', fillColor: sequentialColor(r.per_pupil_funding, min, max), fillOpacity: 0.92,
+    });
+    marker.bindTooltip(
+      `<strong>${r.school_name}</strong><br>Per-pupil funding: $${fmtInt(Math.round(r.per_pupil_funding))}`,
+      { sticky: true }
+    );
+    marker.on('click', () => openSchool(r.school_id));
+    marker.addTo(group);
+  });
+  group.addTo(budgetMap);
+  budgetMapGroup = group;
+
+  if (coverageEl) coverageEl.textContent = `${eligible.length - missing.length} of ${eligible.length} schools with funding data shown` + (missing.length ? `; ${missing.length} without a mapped location omitted.` : '.');
+
+  const layers = group.getLayers();
+  if (layers.length) {
+    const b = L.featureGroup(layers).getBounds();
+    if (b.isValid()) budgetMap.fitBounds(b, { padding: [24, 24], maxZoom: 12 });
+  }
+  setTimeout(() => budgetMap.invalidateSize(), 50);
+}
+
 function renderBudgetTab() {
   const unmatchedNote = document.getElementById('budget-unmatched-note');
   if (!BUDGET) {
@@ -1108,6 +1237,7 @@ function renderBudgetTab() {
     withChange.sort((a, b) => (a.pct ?? 0) - (b.pct ?? 0));
 
     renderBudgetGapChart(withChange);
+    renderBudgetMap(withChange);
 
     renderTable('budget-table', [
       { key: 'school_name', label: 'School' },
@@ -1175,6 +1305,7 @@ document.getElementById('tabbar').addEventListener('click', e => {
   if (tab === 'losing' && !renderedTabs.has('losing')) { renderDeclines(); renderedTabs.add('losing'); }
   else if (tab === 'losing' && declMap) { window.dispatchEvent(new Event('resize')); setTimeout(() => declMap.invalidateSize(), 50); }
   else if (tab === 'budget' && !renderedTabs.has('budget')) { renderBudgetTab(); renderedTabs.add('budget'); }
+  else if (tab === 'budget' && budgetMap) { window.dispatchEvent(new Event('resize')); setTimeout(() => budgetMap.invalidateSize(), 50); }
 });
 
 window.addEventListener('hashchange', () => {
@@ -1196,10 +1327,12 @@ Promise.all([
   fetch('data/geo/attendance_highschool.geojson?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
   fetch('data/geo/schools_no_boundary.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
   fetch('data/budget.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
-]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary, budget]) => {
+  fetch('data/school_demographics.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
+]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary, budget, schoolDemo]) => {
   SUM = sum; SCHOOLS = schools; LOCS = locs; GROUPS = groups; ESB_MAP = esbMap; ESB_GEO = esbGeo;
   GEO.community_areas = ca; GEO.networks = net; GEO.attendance_elementary = attES; GEO.attendance_highschool = attHS; GEO.schools_no_boundary = noBoundary;
   BUDGET = budget;
+  SCHOOL_DEMO = schoolDemo;
   if (budget) budget.schools.forEach(r => { if (r.school_id != null) BUDGET_BY_ID[String(r.school_id)] = r; });
   buildSchoolIndex();
   document.getElementById('meta').textContent =
