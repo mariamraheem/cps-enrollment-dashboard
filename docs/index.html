@@ -92,9 +92,12 @@
 
   /* Hero stat row */
   .hero-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin: 22px 0 30px; }
-  .hero-stat { background: var(--primary); color: #fff; border-radius: 10px; padding: 18px 20px; }
-  .hero-stat .value { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.9rem; line-height: 1; letter-spacing: -0.01em; }
-  .hero-stat .label { font-size: 0.82rem; margin-top: 8px; opacity: 0.92; line-height: 1.35; }
+  .hero-stat {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    border-top: 3px solid var(--primary); box-shadow: var(--shadow); border-radius: 10px; padding: 18px 20px;
+  }
+  .hero-stat .value { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 1.9rem; line-height: 1; letter-spacing: -0.01em; color: var(--primary); }
+  .hero-stat .label { font-size: 0.82rem; margin-top: 8px; opacity: 1; line-height: 1.35; color: var(--text-muted); }
 
   /* Tabs */
   .tabbar { display: flex; gap: 6px; margin-bottom: 26px; border-bottom: 1px solid var(--border); overflow-x: auto; }
