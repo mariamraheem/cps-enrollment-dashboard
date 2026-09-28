@@ -41,6 +41,12 @@ jobs:
       - name: Rebuild per-school data
         run: python3 scripts/build_schools.py
 
+      - name: Refresh boundary GeoJSON (Community Areas, Networks, School attendance)
+        run: python3 scripts/fetch_geo.py
+
+      - name: Rebuild map layers + fill school group gaps
+        run: python3 scripts/build_geo.py
+
       - name: Check for changes
         id: git-check
         run: |
