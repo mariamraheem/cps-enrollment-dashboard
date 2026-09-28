@@ -47,6 +47,12 @@ jobs:
       - name: Rebuild map layers + fill school group gaps
         run: python3 scripts/build_geo.py
 
+      - name: Refresh FY27 school budget workbooks
+        run: python3 scripts/fetch_budget.py
+
+      - name: Rebuild school budget data
+        run: python3 scripts/build_budget.py
+
       - name: Check for changes
         id: git-check
         run: |

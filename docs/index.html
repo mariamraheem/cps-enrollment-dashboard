@@ -225,6 +225,7 @@
       <button class="tab-btn active" data-tab="changing">How is CPS changing?</button>
       <button class="tab-btn" data-tab="losing">Which schools are losing students?</button>
       <button class="tab-btn" data-tab="school">School view</button>
+      <button class="tab-btn" data-tab="budget">School budgets</button>
     </div>
 
     <!-- TAB A: HOW IS CPS CHANGING -->
@@ -329,7 +330,36 @@
             <h2>Compared to its network and community area</h2>
             <div class="compare-tiles" id="school-compare"></div>
           </div>
+          <div class="card" id="school-budget-card">
+            <h2>FY2027 budget</h2>
+            <div id="school-budget"></div>
+          </div>
         </div>
+      </div>
+    </section>
+
+    <!-- TAB D: SCHOOL BUDGETS -->
+    <section class="tab-panel" id="panel-budget">
+      <div class="card">
+        <h2>FY2027 school budgets</h2>
+        <p class="note">Every school's FY2027 budget was built using its <strong>Fall 2025</strong> enrollment (school year 2025-2026). This compares that budgeted count to the school's <strong>actual</strong> Fall 2026 enrollment (school year 2026-2027) now that the year has started, alongside a per-pupil funding figure. Traditional/specialty schools are funded mostly through centrally-provided staff rather than cash, so their per-pupil figure below covers only the Need-Based Flexible and Title I dollars &mdash; it understates their real per-pupil resourcing. Charter and Contract/ALOP/SAFE schools are funded through per-pupil dollar contracts, so their figure is closer to a full per-pupil total. <span id="budget-unmatched-note"></span></p>
+        <p class="note"><a href="https://www.cps.edu/about/finance/budget/budget-2027/more-information-2027/" target="_blank" rel="noopener">CPS FY2027 School Budget Overview</a></p>
+      </div>
+      <div class="stat-row" id="budget-stats"></div>
+      <div class="card">
+        <div class="card-controls">
+          <label class="field">School type
+            <span class="radio-group" id="budget-type-filter">
+              <button type="button" data-val="all" class="active">All</button>
+              <button type="button" data-val="district">Traditional &amp; Specialty</button>
+              <button type="button" data-val="charter">Charter</button>
+              <button type="button" data-val="contract">Contract / ALOP / SAFE</button>
+            </span>
+          </label>
+        </div>
+        <h2 id="budget-table-title">Schools sorted by enrollment shortfall (actual vs. budgeted)</h2>
+        <div class="table-toolbar"><button type="button" class="download-btn" id="budget-table-dl"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.5v7.5m0 0-3-3m3 3 3-3M2.5 12.5v1a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-1" stroke-linecap="round" stroke-linejoin="round"/></svg>Download CSV</button></div>
+        <div class="table-wrap" id="budget-table"></div>
       </div>
     </section>
   </div>
@@ -442,6 +472,16 @@ function fillSelect(elId, options, selectedValue, onChange) {
 let SUM = null, SCHOOLS = null, LOCS = null, GROUPS = null, ESB_MAP = null, ESB_GEO = null;
 let GEO = { community_areas: null, networks: null, attendance_elementary: null, attendance_highschool: null, schools_no_boundary: null };
 let SCHOOL_LATEST = {}; // school_id -> {school_id, school_name}
+let BUDGET = null; // { fiscal_year, budget_enrollment_year, actual_enrollment_year, source, schools: [...], unmatched: [...] }
+let BUDGET_BY_ID = {}; // school_id (string) -> budget record
+let budgetTypeFilter = 'all';
+
+const BUDGET_BASIS_LABEL = {
+  district_flex_title1: 'Need-Based Flexible + Title I per-pupil rate (excludes centrally-provided staff)',
+  district_altspec_title1: 'Title I per-pupil rate (excludes centrally-provided staff)',
+  charter_per_capita_tuition: 'Per capita tuition charge (citywide rate × enrollment)',
+  contract_component_sum: 'Core instructional + non-instructional + special ed + facilities, per pupil',
+};
 
 const GRADE_BANDS = [
   { key: 'grade_pre_k', label: 'Pre-K', accent: '--series-2' },
@@ -962,6 +1002,91 @@ function renderSchoolView(sid) {
     pctTile(titleCaseWords(group.community_area), agg ? agg.pct : null);
   }
   document.getElementById('school-compare').innerHTML = tiles.join('') || '<p class="note">Comparison data unavailable.</p>';
+
+  // FY2027 budget card
+  const budgetEl = document.getElementById('school-budget');
+  const b = BUDGET_BY_ID[sid];
+  if (!b) {
+    budgetEl.innerHTML = '<p class="note">No FY2027 budget record matched to this school.</p>';
+  } else {
+    const change = (b.actual_enrollment != null && b.budgeted_enrollment != null) ? b.actual_enrollment - b.budgeted_enrollment : null;
+    const pct = (change != null && b.budgeted_enrollment) ? change / b.budgeted_enrollment * 100 : null;
+    const tiles = [
+      `<div class="stat-tile"><div class="label">Budgeted enrollment (${BUDGET.budget_enrollment_year})</div><div class="value">${fmtInt(b.budgeted_enrollment)}</div></div>`,
+      `<div class="stat-tile"><div class="label">Actual enrollment (${BUDGET.actual_enrollment_year})</div><div class="value">${fmtInt(b.actual_enrollment)}</div></div>`,
+      `<div class="stat-tile"><div class="label">Enrollment vs. budget</div><div class="value ${pct==null?'':(pct<0?'neg':'pos')}">${fmtSignedPct(pct)}</div></div>`,
+      `<div class="stat-tile"><div class="label">Per-pupil funding</div><div class="value">${b.per_pupil_funding == null ? '—' : '$' + fmtInt(Math.round(b.per_pupil_funding))}</div></div>`,
+    ];
+    budgetEl.innerHTML = `<div class="compare-tiles">${tiles.join('')}</div><p class="note">${BUDGET_BASIS_LABEL[b.funding_basis] || ''}</p>`;
+  }
+}
+
+// --------------------------- Tab D: School budgets ----------------------
+function budgetTypeMatches(rec, filter) {
+  if (filter === 'all') return true;
+  if (filter === 'district') return rec.funding_basis === 'district_flex_title1' || rec.funding_basis === 'district_altspec_title1';
+  if (filter === 'charter') return rec.funding_basis === 'charter_per_capita_tuition';
+  if (filter === 'contract') return rec.funding_basis === 'contract_component_sum';
+  return true;
+}
+
+function renderBudgetTab() {
+  const unmatchedNote = document.getElementById('budget-unmatched-note');
+  if (!BUDGET) {
+    unmatchedNote.textContent = '';
+    document.getElementById('budget-stats').innerHTML = '';
+    document.getElementById('budget-table').innerHTML = '<p class="note">FY2027 budget data isn’t available yet.</p>';
+    return;
+  }
+  if (BUDGET.unmatched && BUDGET.unmatched.length) {
+    unmatchedNote.textContent = `${BUDGET.unmatched.length} school${BUDGET.unmatched.length === 1 ? '' : 's'} in the budget workbook couldn’t be matched to the enrollment data by name and ${BUDGET.unmatched.length === 1 ? 'is' : 'are'} excluded below: ${BUDGET.unmatched.join(', ')}.`;
+  } else {
+    unmatchedNote.textContent = '';
+  }
+
+  function refresh() {
+    const filtered = BUDGET.schools.filter(r => budgetTypeMatches(r, budgetTypeFilter) && r.budgeted_enrollment != null && r.actual_enrollment != null);
+    const withChange = filtered.map(r => {
+      const change = r.actual_enrollment - r.budgeted_enrollment;
+      const pct = r.budgeted_enrollment ? change / r.budgeted_enrollment * 100 : null;
+      return Object.assign({}, r, { change, pct });
+    });
+
+    const below = withChange.filter(r => r.change < 0).length;
+    const pctsSorted = withChange.map(r => r.pct).filter(p => p != null).sort((a, b) => a - b);
+    const medianPct = pctsSorted.length ? pctsSorted[Math.floor(pctsSorted.length / 2)] : null;
+
+    document.getElementById('budget-stats').innerHTML = [
+      { label: 'Schools with FY2027 budget data', value: fmtInt(withChange.length), cls: '' },
+      { label: 'Enrolled below their FY2027 budgeted count', value: fmtInt(below), cls: 'neg' },
+      { label: 'Median enrollment variance', value: fmtSignedPct(medianPct), cls: medianPct != null && medianPct < 0 ? 'neg' : 'pos' },
+    ].map(t => `<div class="stat-tile"><div class="label">${t.label}</div><div class="value ${t.cls}">${t.value}</div></div>`).join('');
+
+    withChange.sort((a, b) => (a.pct ?? 0) - (b.pct ?? 0));
+
+    renderTable('budget-table', [
+      { key: 'school_name', label: 'School' },
+      { key: 'school_type', label: 'Type' },
+      { key: 'network', label: 'Network' },
+      { key: 'budgeted_enrollment', label: `Budgeted (${BUDGET.budget_enrollment_year})`, fmt: fmtInt },
+      { key: 'actual_enrollment', label: `Actual (${BUDGET.actual_enrollment_year})`, fmt: fmtInt },
+      { key: 'change', label: 'Change', fmt: fmtSignedInt, signColor: true },
+      { key: 'pct', label: '% Change', fmt: fmtSignedPct, signColor: true },
+      { key: 'per_pupil_funding', label: 'Per-Pupil Funding', fmt: v => v == null ? '—' : '$' + fmtInt(Math.round(v)) },
+    ], withChange, `cps-fy2027-budget-${budgetTypeFilter}.csv`, row => openSchool(row.school_id));
+  }
+
+  document.querySelectorAll('#budget-type-filter button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('active')) return;
+      document.querySelectorAll('#budget-type-filter button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      budgetTypeFilter = btn.dataset.val;
+      refresh();
+    });
+  });
+
+  refresh();
 }
 
 // --------------------------- Search ------------------------------------
@@ -1004,6 +1129,7 @@ document.getElementById('tabbar').addEventListener('click', e => {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + tab));
   if (tab === 'losing' && !renderedTabs.has('losing')) { renderDeclines(); renderedTabs.add('losing'); }
   else if (tab === 'losing' && declMap) { window.dispatchEvent(new Event('resize')); setTimeout(() => declMap.invalidateSize(), 50); }
+  else if (tab === 'budget' && !renderedTabs.has('budget')) { renderBudgetTab(); renderedTabs.add('budget'); }
 });
 
 window.addEventListener('hashchange', () => {
@@ -1024,9 +1150,12 @@ Promise.all([
   fetch('data/geo/attendance_elementary.geojson?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
   fetch('data/geo/attendance_highschool.geojson?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
   fetch('data/geo/schools_no_boundary.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
-]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary]) => {
+  fetch('data/budget.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
+]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary, budget]) => {
   SUM = sum; SCHOOLS = schools; LOCS = locs; GROUPS = groups; ESB_MAP = esbMap; ESB_GEO = esbGeo;
   GEO.community_areas = ca; GEO.networks = net; GEO.attendance_elementary = attES; GEO.attendance_highschool = attHS; GEO.schools_no_boundary = noBoundary;
+  BUDGET = budget;
+  if (budget) budget.schools.forEach(r => { if (r.school_id != null) BUDGET_BY_ID[String(r.school_id)] = r; });
   buildSchoolIndex();
   document.getElementById('meta').textContent =
     `Last checked ${new Date(sum.last_built).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })} · ${sum.years.length} school years of district data · ${schools.years.length} years of school-level data`;
