@@ -311,15 +311,25 @@ function hexToRgba(hex, a) {
   return `rgba(${parseInt(h.substring(0,2),16)},${parseInt(h.substring(2,4),16)},${parseInt(h.substring(4,6),16)},${a})`;
 }
 function baseLayout(extra) {
-  return Object.assign({
+  extra = extra || {};
+  // automargin lets Plotly grow the plot's margins to fit whatever tick
+  // labels actually render (long, rotated, or otherwise) instead of
+  // clipping them at the fixed margin below — every caller gets this via
+  // a manual per-axis merge since Object.assign only shallow-replaces
+  // xaxis/yaxis wholesale when a caller overrides one.
+  const base = {
     paper_bgcolor: cssVar('--surface-1'), plot_bgcolor: cssVar('--surface-1'),
     font: { family: 'system-ui, -apple-system, "Segoe UI", sans-serif', color: cssVar('--text-secondary'), size: 12 },
-    margin: { l: 52, r: 16, t: 10, b: 36 },
-    xaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') } },
-    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, zerolinecolor: cssVar('--baseline') },
+    margin: { l: 52, r: 24, t: 10, b: 36 },
+    xaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, automargin: true },
+    yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, zerolinecolor: cssVar('--baseline'), automargin: true },
     legend: { orientation: 'h', y: -0.18, font: { color: cssVar('--text-secondary') } },
     hoverlabel: { bgcolor: cssVar('--surface-1'), bordercolor: cssVar('--border'), font: { color: cssVar('--text-primary') } },
-  }, extra || {});
+  };
+  const merged = Object.assign({}, base, extra);
+  if (extra.xaxis) merged.xaxis = Object.assign({}, base.xaxis, extra.xaxis);
+  if (extra.yaxis) merged.yaxis = Object.assign({}, base.yaxis, extra.yaxis);
+  return merged;
 }
 const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
 
@@ -340,12 +350,12 @@ function yoyBarChart(elId, categories, current, previous, opts) {
   const pct = categories.map((c, i) => previous[i] ? ((current[i]-previous[i])/previous[i]*100) : null);
   const good = cssVar('--success'), bad = cssVar('--decline');
   Plotly.newPlot(elId, [{
-    x: categories, y: pct, type: 'bar',
+    x: categories, y: pct, type: 'bar', cliponaxis: false,
     marker: { color: pct.map(v => v == null ? cssVar('--text-muted') : (v >= 0 ? good : bad)) },
     text: pct.map(v => fmtSignedPct(v)), textposition: 'outside',
     customdata: categories.map((c,i) => [current[i], previous[i]]),
     hovertemplate: '<b>%{x}</b><br>YoY: %{y:.1f}%<br>Current: %{customdata[0]:,}<br>Previous: %{customdata[1]:,}<extra></extra>',
-  }], baseLayout({ showlegend: false, yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, ticksuffix: '%', zeroline: true } }), PLOTLY_CONFIG);
+  }], baseLayout({ showlegend: false, margin: { l: 52, r: 24, t: 28, b: 36 }, yaxis: { gridcolor: cssVar('--gridline'), linecolor: cssVar('--baseline'), tickfont: { color: cssVar('--text-muted') }, ticksuffix: '%', zeroline: true, automargin: true } }), PLOTLY_CONFIG);
 }
 
 function renderTable(elId, columns, rows) {
