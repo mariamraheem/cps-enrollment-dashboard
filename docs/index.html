@@ -448,6 +448,12 @@ function fillSelect(elId, options, selectedValue, onChange) {
 // ---------------------------------------------------------------------
 let SUM = null, SCHOOLS = null, LOCS = null, GROUPS = null, ESB_MAP = null, ESB_GEO = null, SCHOOL_DEMO = null;
 let GEO = { community_areas: null, networks: null, attendance_elementary: null, attendance_highschool: null, schools_no_boundary: null };
+let NETWORK_NAMES = {}; // "Network 4" -> "Logan-Lincoln Park", where CPS publishes one (elementary networks 1-13 only)
+function networkLabel(net) {
+  if (!net) return net;
+  const zone = NETWORK_NAMES[net];
+  return zone ? `${net} (${zone})` : net;
+}
 let SCHOOL_LATEST = {}; // school_id -> {school_id, school_name}
 let BUDGET = null; // { fiscal_year, budget_enrollment_year, actual_enrollment_year, source, schools: [...], unmatched: [...] }
 let BUDGET_BY_ID = {}; // school_id (string) -> budget record
@@ -765,7 +771,7 @@ function renderMap(allRows) {
       },
       onEachFeature: (feat, layer) => {
         const rawLabel = feat.properties[propKey];
-        const label = mapGroupBy === 'community_area' ? titleCaseWords(rawLabel) : rawLabel;
+        const label = mapGroupBy === 'community_area' ? titleCaseWords(rawLabel) : networkLabel(rawLabel);
         const a = byKey[rawLabel];
         layer.bindTooltip(a
           ? `<strong>${label}</strong><br>${a.n} schools<br>${decState.base}: ${fmtInt(a.base)} &rarr; ${decState.compare}: ${fmtInt(a.compare)}<br>${fmtSignedInt(a.abs)} (${fmtSignedPct(a.pct)})`
@@ -964,7 +970,7 @@ function renderSchoolView(sid) {
   document.getElementById('school-name').textContent = name;
   const subParts = [];
   if (group && group.community_area) subParts.push(titleCaseWords(group.community_area));
-  if (group && group.network) subParts.push(group.network);
+  if (group && group.network) subParts.push(networkLabel(group.network));
   if (esb) subParts.push('ESB ' + esb.toUpperCase());
   document.getElementById('school-sub').textContent = subParts.join(' · ') || 'Location details unavailable.';
 
@@ -995,7 +1001,7 @@ function renderSchoolView(sid) {
   pctTile(`This school (${decState.base}&rarr;${decState.compare})`, thisRow ? thisRow.pct : null);
   if (group && group.network) {
     const agg = computeGroupAggregates(rows, 'network').find(a => a.key === group.network);
-    pctTile(group.network, agg ? agg.pct : null);
+    pctTile(networkLabel(group.network), agg ? agg.pct : null);
   }
   if (group && group.community_area) {
     const agg = computeGroupAggregates(rows, 'community_area').find(a => a.key === group.community_area);
@@ -1086,6 +1092,7 @@ Promise.all([
 ]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary, budget, schoolDemo]) => {
   SUM = sum; SCHOOLS = schools; LOCS = locs; GROUPS = groups; ESB_MAP = esbMap; ESB_GEO = esbGeo;
   GEO.community_areas = ca; GEO.networks = net; GEO.attendance_elementary = attES; GEO.attendance_highschool = attHS; GEO.schools_no_boundary = noBoundary;
+  if (net) net.features.forEach(f => { if (f.properties.network_name) NETWORK_NAMES[f.properties.network] = f.properties.network_name; });
   BUDGET = budget;
   SCHOOL_DEMO = schoolDemo;
   if (budget) budget.schools.forEach(r => { if (r.school_id != null) BUDGET_BY_ID[String(r.school_id)] = r; });

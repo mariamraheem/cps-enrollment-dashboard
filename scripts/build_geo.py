@@ -73,6 +73,7 @@ def build_community_areas():
 # --------------------------------------------------------------------
 def build_networks():
     seen = {}
+    named = 0
     for name in ("cps_geo_networks_elementary", "cps_geo_networks_highschool"):
         raw = load_raw(name)
         for feat in raw["features"]:
@@ -80,11 +81,21 @@ def build_networks():
             net = str(p.get("network", "")).strip()
             if not net or net in seen:
                 continue
-            seen[net] = clean_feature(feat["geometry"], {"network": net})
+            # Elementary networks (1-13) carry a "planningzo" geographic label
+            # in CPS's own boundary file (e.g. "Logan-Lincoln Park"); high
+            # school networks (14-17) don't have an equivalent, so this is
+            # left out of the properties for those (front end falls back to
+            # the plain "Network N" label when absent).
+            props = {"network": net}
+            zone = str(p.get("planningzo") or "").strip()
+            if zone:
+                props["network_name"] = zone
+                named += 1
+            seen[net] = clean_feature(feat["geometry"], props)
     path = GEO_OUT_DIR / "networks.geojson"
     with open(path, "w") as f:
         json.dump(fc(list(seen.values())), f)
-    print(f"networks.geojson: {len(seen)} features")
+    print(f"networks.geojson: {len(seen)} features ({named} with a geographic name)")
     return set(seen.keys())
 
 
