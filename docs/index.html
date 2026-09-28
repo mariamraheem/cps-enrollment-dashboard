@@ -24,6 +24,7 @@
     --series-1: #1f7a34; --series-2: #c99a2e; --series-3: #1baf7a; --series-4: #eb6834;
     --series-5: #4a3aa7; --series-6: #e87ba4; --series-7: #1f5fa8; --series-8: #e34948;
     --success:  #1a6b2c;
+    --decline:  #6b6b63;
     --accent-wash:      rgba(31,122,52,0.09);
     --accent-wash-gold: rgba(201,154,46,0.14);
   }
@@ -36,7 +37,7 @@
       --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
       --series-1: #288228; --series-2: #af8c2d; --series-3: #17a877; --series-4: #d1682f;
       --series-5: #7a6cd1; --series-6: #c96f95; --series-7: #3f7bc4; --series-8: #e2605f;
-      --success: #4caf5a; --accent-wash: rgba(40,130,40,0.16); --accent-wash-gold: rgba(175,140,45,0.18);
+      --success: #4caf5a; --decline: #9c9c8f; --accent-wash: rgba(40,130,40,0.16); --accent-wash-gold: rgba(175,140,45,0.18);
     }
   }
   :root[data-theme="dark"] {
@@ -47,7 +48,7 @@
     --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
     --series-1: #288228; --series-2: #af8c2d; --series-3: #17a877; --series-4: #d1682f;
     --series-5: #7a6cd1; --series-6: #c96f95; --series-7: #3f7bc4; --series-8: #e2605f;
-    --success: #4caf5a; --accent-wash: rgba(40,130,40,0.16); --accent-wash-gold: rgba(175,140,45,0.18);
+    --success: #4caf5a; --decline: #9c9c8f; --accent-wash: rgba(40,130,40,0.16); --accent-wash-gold: rgba(175,140,45,0.18);
   }
 
   * { box-sizing: border-box; }
@@ -104,7 +105,7 @@
   .stat-tile .value { font-size: 1.7rem; font-weight: 650; letter-spacing: -0.01em; line-height: 1; }
   .stat-tile .spark { flex-shrink: 0; }
   .stat-tile .delta { font-size: 0.78rem; font-weight: 600; margin-top: 8px; color: var(--text-secondary); }
-  .stat-tile .delta.down { color: var(--series-8); }
+  .stat-tile .delta.down { color: var(--decline); }
   .stat-tile .delta.up { color: var(--success); }
 
   .section-label { display: flex; align-items: baseline; justify-content: space-between; margin: 30px 2px 12px; }
@@ -140,7 +141,7 @@
   table.data-table tbody tr:hover { background: var(--surface-2); }
   table.data-table tbody td { border-bottom: 1px solid var(--gridline); font-variant-numeric: tabular-nums; }
   table.data-table tbody td.pos { color: var(--success); }
-  table.data-table tbody td.neg { color: var(--series-8); }
+  table.data-table tbody td.neg { color: var(--decline); }
 
   footer { color: var(--text-muted); font-size: 0.82rem; margin-top: 40px; border-top: 1px solid var(--border); padding-top: 18px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
   footer a { color: var(--text-secondary); text-decoration: none; border-bottom: 1px solid var(--border); }
@@ -337,7 +338,7 @@ function sparklineSVG(values, color, w, h) {
 function yoyBarChart(elId, categories, current, previous, opts) {
   opts = opts || {};
   const pct = categories.map((c, i) => previous[i] ? ((current[i]-previous[i])/previous[i]*100) : null);
-  const good = cssVar('--success'), bad = cssVar('--series-8');
+  const good = cssVar('--success'), bad = cssVar('--decline');
   Plotly.newPlot(elId, [{
     x: categories, y: pct, type: 'bar',
     marker: { color: pct.map(v => v == null ? cssVar('--text-muted') : (v >= 0 ? good : bad)) },
@@ -555,7 +556,7 @@ function renderMap(rows) {
 
   declMarkers.clearLayers();
 
-  const good = cssVar('--success'), bad = cssVar('--series-8');
+  const good = cssVar('--success'), bad = cssVar('--decline');
   const mapped = rows.filter(r => LOCS && LOCS[String(r.school_id)]);
   const maxAbsPct = Math.max(1, ...rows.map(r => Math.abs(r.pct)));
 
@@ -618,8 +619,8 @@ function renderDeclines() {
 
     document.getElementById('dec-stats').innerHTML = [
       { label: 'Schools analyzed', value: fmtInt(rows.length), accent: '--series-1' },
-      { label: 'Schools with declines', value: fmtInt(declining), accent: '--series-8' },
-      { label: 'Median % change', value: fmtSignedPct(medianPct), accent: medianPct < 0 ? '--series-8' : '--success' },
+      { label: 'Schools with declines', value: fmtInt(declining), accent: '--decline' },
+      { label: 'Median % change', value: fmtSignedPct(medianPct), accent: medianPct < 0 ? '--decline' : '--success' },
     ].map(t => `<div class="stat-tile" style="--tile-accent:${cssVar(t.accent)}"><div class="label">${t.label}</div><div class="value-row"><div class="value">${t.value}</div></div></div>`).join('');
 
     const top = rows.slice(0, decState.topN);
