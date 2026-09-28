@@ -478,8 +478,8 @@ const RACE_META = [
 ];
 
 const GROUP_DEFS = {
-  all:        { label: 'All students', kind: 'total+breakdown', totalField: 'total_enrollment', breakdown: GRADE_BANDS, filter: () => true },
-  race:       { label: 'Race / ethnicity', kind: 'multi', series: RACE_META, totalField: 'race_total_n', filter: y => y.race_total_n },
+  all:        { label: 'All students', kind: 'total+breakdown', totalField: 'total_enrollment', breakdown: GRADE_BANDS, filter: () => true, allowChange: true },
+  race:       { label: 'Race / ethnicity', kind: 'multi', series: RACE_META, totalField: 'race_total_n', filter: y => y.race_total_n, allowChange: true },
   el:         { label: 'English learners', kind: 'single', nKey: 'el_n', pctKey: 'el_pct', accent: '--series-1', filter: y => y.el_pct != null },
   iep:        { label: 'Students with IEPs', kind: 'single', nKey: 'swd_n', pctKey: 'swd_pct', accent: '--series-7', filter: y => y.swd_pct != null },
   lowincome:  { label: 'Low income', kind: 'single', nKey: 'low_income_n', pctKey: 'low_income_pct', accent: '--series-2', filter: y => y.low_income_pct != null },
@@ -607,11 +607,22 @@ function renderGroupChart() {
   renderTable('group-table', cols, rows, `cps-${currentGroup}-${currentMode}.csv`);
 }
 
+function syncModeToggle() {
+  const allowChange = !!GROUP_DEFS[currentGroup].allowChange;
+  const changeBtn = document.querySelector('#mode-toggle button[data-mode="change"]');
+  changeBtn.style.display = allowChange ? '' : 'none';
+  if (!allowChange && currentMode === 'change') {
+    currentMode = 'count';
+    document.querySelectorAll('#mode-toggle button').forEach(b => b.classList.toggle('active', b.dataset.mode === 'count'));
+  }
+}
+
 document.getElementById('group-list').addEventListener('click', e => {
   const btn = e.target.closest('button[data-group]');
   if (!btn) return;
   document.querySelectorAll('#group-list button').forEach(b => b.classList.toggle('active', b === btn));
   currentGroup = btn.dataset.group;
+  syncModeToggle();
   renderGroupChart();
 });
 document.getElementById('mode-toggle').addEventListener('click', e => {
@@ -1089,6 +1100,7 @@ Promise.all([
   document.getElementById('content').style.display = '';
   document.getElementById('status').style.display = 'none';
   renderHeroStats();
+  syncModeToggle();
   renderGroupChart();
   initSearch();
   const m = location.hash.match(/school=([^&]+)/);
