@@ -86,6 +86,13 @@
   }
   .tab-btn:hover { color: var(--text-primary); }
   .tab-btn.active { color: #ffffff; background: var(--series-1); box-shadow: var(--shadow); }
+
+  /* Dark-mode look for the OSM basemap (no native dark tile style without an
+     API key) — invert + hue-rotate the raster tiles, leave our own markers
+     and popups untouched since they live in a separate Leaflet pane. */
+  #dec-map.dec-map-dark .leaflet-tile-pane {
+    filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.88) saturate(0.9);
+  }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
@@ -529,25 +536,22 @@ function renderMap(rows) {
 
   const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
     && document.documentElement.getAttribute('data-theme') !== 'light';
-  const tileUrl = isDark
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
   if (!declMap) {
     declMap = L.map('dec-map', { scrollWheelZoom: false, attributionControl: true });
-    declTiles = L.tileLayer(tileUrl, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19,
+    // Standard OpenStreetMap raster tiles — free, no API key. CARTO's free
+    // anonymous basemap tiles now require a signed-up key, so we use OSM's
+    // tile server directly and fake a dark look with a CSS filter instead of
+    // a separate dark tile style (see .dec-map-dark below).
+    declTiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: 'abc', maxZoom: 19,
     }).addTo(declMap);
     declMap.setView([41.85, -87.68], 10.4);
     declMarkers = L.layerGroup().addTo(declMap);
-  } else if (declTiles._url !== tileUrl) {
-    declMap.removeLayer(declTiles);
-    declTiles = L.tileLayer(tileUrl, {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: 'abcd', maxZoom: 19,
-    }).addTo(declMap);
   }
+
+  mapEl.classList.toggle('dec-map-dark', isDark);
 
   declMarkers.clearLayers();
 
