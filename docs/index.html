@@ -72,6 +72,7 @@
   .search-result-item { padding: 9px 12px; font-size: 0.86rem; cursor: pointer; border-bottom: 1px solid var(--border); }
   .search-result-item:last-child { border-bottom: none; }
   .search-result-item:hover, .search-result-item.hi { background: var(--primary-wash); }
+  .search-result-sub { font-size: 0.76rem; color: var(--text-muted); margin-top: 1px; }
   .search-empty { padding: 10px 12px; font-size: 0.82rem; color: var(--text-muted); }
 
   .wrap { max-width: 1180px; margin: 0 auto; padding: 28px 20px 72px; }
@@ -455,6 +456,11 @@ function networkLabel(net) {
   return zone ? `${net} (${zone})` : net;
 }
 let SCHOOL_LATEST = {}; // school_id -> {school_id, school_name}
+let SCHOOL_NAMES = {}; // school_id (string) -> { long_name, short_name, governance, primary_category, grades, esb_district, esb_representative }, from CPS's school-profile API
+function fullSchoolName(sid, fallback) {
+  const rec = SCHOOL_NAMES[String(sid)];
+  return (rec && rec.long_name) || fallback;
+}
 let BUDGET = null; // { fiscal_year, budget_enrollment_year, actual_enrollment_year, source, schools: [...], unmatched: [...] }
 let BUDGET_BY_ID = {}; // school_id (string) -> budget record
 
@@ -653,7 +659,7 @@ function computeDeclines() {
     if (!(sid in cmpMap)) return;
     const b = baseMap[sid], c = cmpMap[sid];
     const abs = c.total - b.total;
-    rows.push({ school_id: sid, school_name: b.school_name, base: b.total, compare: c.total, abs, pct: abs / b.total * 100 });
+    rows.push({ school_id: sid, school_name: fullSchoolName(sid, b.school_name), base: b.total, compare: c.total, abs, pct: abs / b.total * 100 });
   });
   rows.sort((a, b) => a.abs - b.abs);
   return rows;
@@ -964,11 +970,13 @@ function renderSchoolView(sid) {
   document.getElementById('school-empty').style.display = 'none';
   document.getElementById('school-content').style.display = '';
 
-  const name = trend[trend.length - 1].school_name;
+  const shortName = trend[trend.length - 1].school_name;
+  const name = fullSchoolName(sid, shortName);
   const group = GROUPS ? GROUPS[sid] : null;
   const esb = ESB_MAP ? ESB_MAP[sid] : null;
   document.getElementById('school-name').textContent = name;
   const subParts = [];
+  if (name !== shortName) subParts.push(shortName);
   if (group && group.community_area) subParts.push(titleCaseWords(group.community_area));
   if (group && group.network) subParts.push(networkLabel(group.network));
   if (esb) subParts.push('ESB ' + esb.toUpperCase());
@@ -1040,9 +1048,16 @@ function initSearch() {
   function search(q) {
     q = q.trim().toLowerCase();
     if (!q) { results.classList.remove('open'); results.innerHTML = ''; return; }
-    const matches = Object.values(SCHOOL_LATEST).filter(r => r.school_name.toLowerCase().includes(q)).slice(0, 8);
+    const matches = Object.values(SCHOOL_LATEST).filter(r => {
+      const full = fullSchoolName(r.school_id, '').toLowerCase();
+      return r.school_name.toLowerCase().includes(q) || (full && full.includes(q));
+    }).slice(0, 8);
     if (!matches.length) { results.innerHTML = '<div class="search-empty">No schools found</div>'; results.classList.add('open'); return; }
-    results.innerHTML = matches.map(r => `<div class="search-result-item" data-id="${r.school_id}">${r.school_name}</div>`).join('');
+    results.innerHTML = matches.map(r => {
+      const full = fullSchoolName(r.school_id, r.school_name);
+      const sub = full !== r.school_name ? `<div class="search-result-sub">${r.school_name}</div>` : '';
+      return `<div class="search-result-item" data-id="${r.school_id}" data-full="${full.replace(/"/g, '&quot;')}"><div>${full}</div>${sub}</div>`;
+    }).join('');
     results.classList.add('open');
   }
   input.addEventListener('input', () => search(input.value));
@@ -1051,7 +1066,7 @@ function initSearch() {
   results.addEventListener('click', e => {
     const item = e.target.closest('.search-result-item[data-id]');
     if (!item) return;
-    input.value = item.textContent;
+    input.value = item.dataset.full;
     results.classList.remove('open');
     openSchool(item.dataset.id);
   });
@@ -1089,8 +1104,10 @@ Promise.all([
   fetch('data/geo/schools_no_boundary.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
   fetch('data/budget.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
   fetch('data/school_demographics.json?_=' + Date.now()).then(r => r.ok ? r.json() : null).catch(() => null),
-]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary, budget, schoolDemo]) => {
+  fetch('data/school_names.json?_=' + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({})),
+]).then(([sum, schools, locs, groups, esbMap, esbGeo, ca, net, attES, attHS, noBoundary, budget, schoolDemo, schoolNames]) => {
   SUM = sum; SCHOOLS = schools; LOCS = locs; GROUPS = groups; ESB_MAP = esbMap; ESB_GEO = esbGeo;
+  SCHOOL_NAMES = schoolNames || {};
   GEO.community_areas = ca; GEO.networks = net; GEO.attendance_elementary = attES; GEO.attendance_highschool = attHS; GEO.schools_no_boundary = noBoundary;
   if (net) net.features.forEach(f => { if (f.properties.network_name) NETWORK_NAMES[f.properties.network] = f.properties.network_name; });
   BUDGET = budget;

@@ -44,6 +44,12 @@ jobs:
       - name: Rebuild per-school demographic breakdowns
         run: python3 scripts/build_school_demographics.py
 
+      - name: Refresh CPS school-profile roster (long names, ESB rep)
+        run: python3 scripts/fetch_school_names.py
+
+      - name: Rebuild school long-name lookup
+        run: python3 scripts/build_school_names.py
+
       - name: Refresh boundary GeoJSON (Community Areas, Networks, School attendance)
         run: python3 scripts/fetch_geo.py
 
